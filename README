@@ -1,0 +1,27 @@
+This project implements a Go client library for the Twitter APIs.
+
+Status:
+-----------------------------
+Currently, only a simple fetch and decode of the public timeline API is
+supported.  The main program demonstrates this.
+
+
+Requirements:
+-----------------------------
+Install the following:
+  Go:    http://golang.org
+  Godag: http://code.google.com/p/godag/
+
+Set up your $GO* env variables as described here:
+http://golang.org/doc/install.html#environment before installing godag.
+
+
+Building
+-----------------------------
+Run the following from the project root:
+
+  gd src -o build/main
+
+The executable will be in build/main
+
+
