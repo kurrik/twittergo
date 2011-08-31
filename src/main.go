@@ -74,6 +74,25 @@ func PrintTweets(tweets []twittergo.Status) {
 }
 
 func main() {
+	config := twittergo.NewOAuthConfig("actltUPH8oFMi83qLo5mDg",
+		"oUXP19r5hX4GlbFvpL3NjQi0omqYyqWZB7uZIguM0E", "oob")
+	oauth, _ := twittergo.NewTwitterOAuth(config)
+	if err := oauth.GetRequestToken(); err != nil {
+		fmt.Println("Error:", err)
+	}
+	url, _ := oauth.GetAuthorizeUrl()
+	fmt.Println("Url:", url)
+	fmt.Print("Input Pin: ")
+	var pin string
+	if _, err := fmt.Scanln(&pin); err != nil {
+		fmt.Println("Error:", err)
+	}
+	if err := oauth.GetAccessToken(config.RequestTokenKey, pin); err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintStruct(*config, "")
+	return
+
 	client := twittergo.NewClient()
 	fmt.Println("Getting public timeline")
 	tweets, err := client.GetPublicTimeline()

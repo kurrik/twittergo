@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// An implementation of Twitter's API in Go.
 package twittergo
 
 import (
-	"fmt"
 	"io"
 	"json"
 	"http"
@@ -145,22 +145,15 @@ type UserMention struct {
 	ScreenName string `json:"screen_name"`
 }
 
-type LoggingReader struct {
-	reader io.ReadCloser
-}
-
-func NewLoggingReader(reader io.ReadCloser) *LoggingReader {
-	return &LoggingReader{reader: reader}
-}
-
-func (lr *LoggingReader) Read(p []byte) (int, os.Error) {
-	n, err := lr.reader.Read(p)
-	fmt.Println(string(p))
-	return n, err
-}
-
-func (lr *LoggingReader) Close() os.Error {
-	return lr.reader.Close()
+func NewTwitterOAuth(config *OAuthConfig) (*OAuthService, os.Error) {
+	signer := &HmacSha1Signer{}
+	return &OAuthService{
+		RequestUrl:   "http://api.twitter.com/oauth/request_token",
+		AuthorizeUrl: "https://api.twitter.com/oauth/authorize",
+		AccessUrl:    "https://api.twitter.com/oauth/access_token",
+		Config:       config,
+		Signer:       signer,
+	}, nil
 }
 
 type Client struct {
