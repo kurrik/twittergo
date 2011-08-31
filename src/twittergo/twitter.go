@@ -16,10 +16,10 @@
 package twittergo
 
 import (
-	"io"
 	"json"
 	"http"
 	"os"
+	"fmt"
 )
 
 type BoundingBox struct {
@@ -145,42 +145,107 @@ type UserMention struct {
 	ScreenName string `json:"screen_name"`
 }
 
-func NewTwitterOAuth(config *OAuthConfig) (*OAuthService, os.Error) {
-	signer := &HmacSha1Signer{}
-	return &OAuthService{
+// Implements a Twitter client.
+type Client struct {
+	BaseUrl    string
+	OAuth      *OAuthService
+	HttpClient *http.Client
+}
+
+// Creates a new Twitter client with the supplied OAuth configuration.
+func NewClient(config *OAuthConfig) *Client {
+	oauth := &OAuthService{
 		RequestUrl:   "http://api.twitter.com/oauth/request_token",
 		AuthorizeUrl: "https://api.twitter.com/oauth/authorize",
 		AccessUrl:    "https://api.twitter.com/oauth/access_token",
 		Config:       config,
-		Signer:       signer,
-	}, nil
+		Signer:       new(HmacSha1Signer),
+	}
+	return &Client{
+		BaseUrl:    "https://api.twitter.com/1/",
+		OAuth:      oauth,
+		HttpClient: new(http.Client),
+	}
 }
 
-type Client struct {
-	apiBase string
-}
-
-func NewClient() *Client {
-	return &Client{apiBase: "https://api.twitter.com/1/"}
-}
-
-func (c *Client) sendRequest(method string, path string, params map[string]string) (io.ReadCloser, os.Error) {
-	url := c.apiBase + path + "?" + UrlEncode(params)
-	response, err := http.Get(url)
+// Sends a HTTP request through this instance's HTTP client.  If auth is
+// requested, then the request is signed with the configured OAuth parameters.
+func (c *Client) sendRequest(request *Request, auth bool) (*http.Response, os.Error) {
+	if auth {
+		return c.OAuth.Send(request, c.HttpClient)
+	}
+	httpRequest, err := request.GetHttpRequest()
+	response, err := c.HttpClient.Do(httpRequest)
 	if err != nil {
 		return nil, err
 	}
-	reader := NewLoggingReader(response.Body)
-	return reader, nil
+	if response.StatusCode != 200 {
+		fmt.Println(httpRequest)
+		fmt.Println(response)
+		return nil, os.NewError("Endpoint response: " + response.Status)
+	}
+	return response, nil
 }
 
-func (c *Client) parseStatusList(reader io.ReadCloser) ([]Status, os.Error) {
-	defer reader.Close()
-	var statuses []Status
-	if err := json.NewDecoder(reader).Decode(&statuses); err != nil {
-		return nil, err
+// Parses a JSON encoded HTTP response into the supplied interface.
+func (c *Client) parseJson(response *http.Response, out interface{}) os.Error {
+	defer response.Body.Close()
+	if err := json.NewDecoder(response.Body).Decode(out); err != nil {
+		return err
 	}
-	return statuses, nil
+	return nil
+}
+
+// Makes a request for a specific path in the API, using supplied params and
+// method, and signing the request if needed.  The result is decoded into
+// the supplied interface.
+func (c *Client) getJson(method string, path string, params map[string]string, auth bool, out interface{}) os.Error {
+	request := NewRequest(method, c.BaseUrl+path+".json", params, nil)
+	response, err := c.sendRequest(request, auth)
+	if err != nil {
+		return err
+	}
+	if err := c.parseJson(response, out); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Issues a request for an OAuth Request Token.
+func (c *Client) GetRequestToken() os.Error {
+	return c.OAuth.GetRequestToken(c.HttpClient)
+}
+
+// Returns an URL which the authorizing user should visit to grant access.
+func (c *Client) GetAuthorizeUrl() (string, os.Error) {
+	return c.OAuth.GetAuthorizeUrl()
+}
+
+// Issues a request for an OAuth Access Token
+func (c *Client) GetAccessToken(token string, verifier string) os.Error {
+	return c.OAuth.GetAccessToken(token, verifier, c.HttpClient)
+}
+
+// Returns the global public timeline.
+func (c *Client) GetPublicTimeline() ([]Status, os.Error) {
+	path := "statuses/public_timeline"
+	params := map[string]string{
+		"include_entities": "true",
+		"count":            "1",
+	}
+	var statuses []Status
+	err := c.getJson("GET", path, params, false, &statuses)
+	return statuses, err
+}
+
+// Returns retweets by the currently authenticated user.
+func (c *Client) GetRetweetedByMe() ([]Status, os.Error) {
+	path := "statuses/retweeted_by_me"
+	params := map[string]string{
+	}
+	var statuses []Status
+	err := c.getJson("GET", path, params, true, &statuses)
+	return statuses, err
 }
 
 func (c *Client) GetHomeTimeline() []Status {
@@ -191,15 +256,3 @@ func (c *Client) GetMentions() []Status {
 	return nil
 }
 
-func (c *Client) GetPublicTimeline() ([]Status, os.Error) {
-	params := map[string]string{
-		"include_entities": "true",
-		"count":            "1",
-	}
-	body, _ := c.sendRequest("GET", "statuses/public_timeline.json", params)
-	return c.parseStatusList(body)
-}
-
-func (c *Client) GetRetweetedByMe() []Status {
-	return nil
-}

@@ -76,9 +76,8 @@ type OAuthService struct {
 }
 
 // Sign and send a Request using the current configuration.
-func (o *OAuthService) Send(request *Request) (*http.Response, os.Error) {
+func (o *OAuthService) Send(request *Request, client *http.Client) (*http.Response, os.Error) {
 	o.Signer.Sign(request, o.Config)
-	client := new(http.Client)
 	httpRequest, err := request.GetHttpRequest()
 	if err != nil {
 		return nil, err
@@ -94,7 +93,7 @@ func (o *OAuthService) Send(request *Request) (*http.Response, os.Error) {
 }
 
 // Issue a request to exchange the current request token for an access token.
-func (o *OAuthService) GetAccessToken(token string, verifier string) os.Error {
+func (o *OAuthService) GetAccessToken(token string, verifier string, client *http.Client) os.Error {
 	if o.Config.RequestTokenKey == "" || o.Config.RequestTokenSecret == "" {
 		return os.NewError("No configured request token")
 	}
@@ -106,7 +105,7 @@ func (o *OAuthService) GetAccessToken(token string, verifier string) os.Error {
 		"oauth_verifier": verifier,
 	}
 	request := NewRequest("POST", o.AccessUrl, params, nil)
-	response, err := o.Send(request)
+	response, err := o.Send(request, client)
 	if err != nil {
 		return err
 	}
@@ -146,9 +145,9 @@ func (o *OAuthService) GetAuthorizeUrl() (string, os.Error) {
 }
 
 // Issue a request to obtain a Request token.
-func (o *OAuthService) GetRequestToken() os.Error {
+func (o *OAuthService) GetRequestToken(client *http.Client) os.Error {
 	request := NewRequest("POST", o.RequestUrl, nil, nil)
-	response, err := o.Send(request)
+	response, err := o.Send(request, client)
 	if err != nil {
 		return err
 	}

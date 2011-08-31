@@ -18,6 +18,9 @@ import (
 	"twittergo"
 	"fmt"
 	"reflect"
+	"os"
+	"path"
+	"gob"
 )
 
 func PrintValue(value reflect.Value, indent string) {
@@ -73,29 +76,104 @@ func PrintTweets(tweets []twittergo.Status) {
 	}
 }
 
-func main() {
-	config := twittergo.NewOAuthConfig("actltUPH8oFMi83qLo5mDg",
-		"oUXP19r5hX4GlbFvpL3NjQi0omqYyqWZB7uZIguM0E", "oob")
-	oauth, _ := twittergo.NewTwitterOAuth(config)
-	if err := oauth.GetRequestToken(); err != nil {
-		fmt.Println("Error:", err)
+// Prompts the user and returns their input as a string.
+func PromptUser(prompt string) string {
+	fmt.Print(prompt + ": ")
+	var input string
+	if _, err := fmt.Scanln(&input); err != nil {
+		return ""
 	}
-	url, _ := oauth.GetAuthorizeUrl()
-	fmt.Println("Url:", url)
-	fmt.Print("Input Pin: ")
-	var pin string
-	if _, err := fmt.Scanln(&pin); err != nil {
-		fmt.Println("Error:", err)
-	}
-	if err := oauth.GetAccessToken(config.RequestTokenKey, pin); err != nil {
-		fmt.Println("Error:", err)
-	}
-	PrintStruct(*config, "")
-	return
+	return input
+}
 
-	client := twittergo.NewClient()
+// Returns the directory path of the directory this executable is stored in.
+func GetExecutableDirectory() string {
+	wd, _ := os.Getwd()
+	dir, _ := path.Split(path.Clean(path.Join(wd, os.Args[0])))
+	return dir
+}
+
+// Saves a serialized version of a twittergo.OAuthConfig to the specified path.
+// Sets the file mask to 600.
+func SaveConfig(path string, config *twittergo.OAuthConfig) os.Error {
+	file, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	encoder := gob.NewEncoder(file)
+	encoder.Encode(config)
+	return os.Chmod(path, 384) // Same as chmod 600
+}
+
+// Loads a serialized version of a twittergo.OAuthConfig from the specified
+// path.
+func LoadConfig(path string) (*twittergo.OAuthConfig, os.Error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	var config twittergo.OAuthConfig
+	decoder := gob.NewDecoder(file)
+	if err := decoder.Decode(&config); err != nil {
+		return nil, err
+	}
+	return &config, nil
+}
+
+func main() {
+	path := path.Join(GetExecutableDirectory(), "config.bin")
+	config, err := LoadConfig(path)
+	if err != nil {
+		fmt.Println("Unable to read configuration at ", path)
+		key := PromptUser("Enter your Twitter Consumer Key")
+		secret := PromptUser("Enter your Twitter Consumer Secret")
+		config = twittergo.NewOAuthConfig(key, secret, "oob")
+		err = SaveConfig(path, config)
+		if err != nil {
+			fmt.Println("Could not save configuration file:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Saved configuration file to ", path)
+	}
+	client := twittergo.NewClient(config)
+	if config.AccessTokenKey == "" {
+		fmt.Println("No access token, starting OAuth flow.")
+		if err := client.GetRequestToken(); err != nil {
+			fmt.Println("Could not get a request token:", err)
+			os.Exit(1)
+		}
+		url, err := client.GetAuthorizeUrl()
+		if err != nil {
+			fmt.Println("Could not get an authorize URL:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Please visit this URL in your browser:", url)
+		pin := PromptUser("Please input the PIN displayed")
+		if err := client.GetAccessToken(config.RequestTokenKey, pin); err != nil {
+			fmt.Println("Could not get an access token:", err)
+			os.Exit(1)
+		}
+		err = SaveConfig(path, config)
+		if err != nil {
+			fmt.Println("Could not save configuration file:", err)
+			os.Exit(1)
+		}
+		fmt.Println("Saved configuration file to ", path)
+	}
+
 	fmt.Println("Getting public timeline")
+	fmt.Println("-----------------------")
 	tweets, err := client.GetPublicTimeline()
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintTweets(tweets)
+
+	fmt.Println("\nGetting your retweets")
+	fmt.Println("-----------------------")
+	tweets, err = client.GetRetweetedByMe()
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
