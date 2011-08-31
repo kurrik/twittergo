@@ -217,8 +217,6 @@ func (s *HmacSha1Signer) Sign(request *Request, config *OAuthConfig) {
 	signer := hmac.NewSHA1([]byte(signingKey))
 	signer.Write([]byte(signatureBase))
 	oauthSignature := base64.StdEncoding.EncodeToString(signer.Sum())
-	fmt.Println(signatureBase)
-	fmt.Println(oauthSignature)
 	oauthParams["oauth_signature"] = oauthSignature
 	headerParts := make([]string, len(oauthParams))
 	var i = 0
@@ -227,7 +225,6 @@ func (s *HmacSha1Signer) Sign(request *Request, config *OAuthConfig) {
 		i += 1
 	}
 	oauthHeader := "OAuth " + strings.Join(headerParts, ", ")
-	fmt.Println(oauthHeader)
 	request.Headers["Authorization"] = oauthHeader
 }
 
@@ -242,7 +239,6 @@ func (HmacSha1Signer) encodeParameters(params map[string]string) string {
 		i += 1
 	}
 	sort.Strings(keys)
-	fmt.Println(keys)
 	for i, key := range keys {
 		value := params[key]
 		encoded := http.URLEscape(key) + "=" + http.URLEscape(value)
