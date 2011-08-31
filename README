@@ -2,8 +2,14 @@ This project implements a Go client library for the Twitter APIs.
 
 Status:
 -----------------------------
-Currently, only a simple fetch and decode of the public timeline API is
-supported.  The main program demonstrates this.
+The main executable, as built by the Makefile will probably demonstrate the
+current functionality of the library.
+
+Supported:
+    * Going through Twitter's OAuth flow and obtaining tokens
+    * Deserializing statuses, users
+    * Fetching public timelines
+    * Fetching OAuth-protected timelines
 
 
 Requirements:
