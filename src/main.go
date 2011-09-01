@@ -165,7 +165,7 @@ func main() {
 
 	fmt.Println("Getting public timeline")
 	fmt.Println("-----------------------")
-	tweets, err := client.GetPublicTimeline()
+	tweets, err := client.GetPublicTimeline(nil)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
@@ -173,7 +173,18 @@ func main() {
 
 	fmt.Println("\nGetting your retweets")
 	fmt.Println("-----------------------")
-	tweets, err = client.GetRetweetedByMe()
+	tweets, err = client.GetRetweetedByMe(&twittergo.Parameters{Count: 1})
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintTweets(tweets)
+
+	fmt.Println("\nGetting ChromiumDev's retweets")
+	fmt.Println("-----------------------")
+	tweets, err = client.GetRetweetedByUser(&twittergo.Parameters{
+		Id:    "ChromiumDev",
+		Count: 1,
+	})
 	if err != nil {
 		fmt.Println("Error:", err)
 	}
