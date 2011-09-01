@@ -25,6 +25,7 @@ import (
 	"os"
 	"encoding/base64"
 	"io/ioutil"
+	"bytes"
 )
 
 // Container for various keys and secrets related to the OAuth process.
@@ -40,6 +41,7 @@ type OAuthConfig struct {
 	AccessTokenKey     string
 	Verifier           string
 	Callback           string
+	Realm              string
 	AccessValues       http.Values
 }
 
@@ -82,11 +84,16 @@ func (o *OAuthService) Send(request *Request, client *http.Client) (*http.Respon
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println(httpRequest)
 	response, err := client.Do(httpRequest)
+	fmt.Println(response)
 	if err != nil {
 		return nil, err
 	}
 	if response.StatusCode != 200 {
+		defer response.Body.Close()
+		body, _ := ioutil.ReadAll(response.Body)
+		fmt.Println("Response body:", string(body))
 		return nil, os.NewError("Endpoint response: " + response.Status)
 	}
 	return response, nil
@@ -146,7 +153,10 @@ func (o *OAuthService) GetAuthorizeUrl() (string, os.Error) {
 
 // Issue a request to obtain a Request token.
 func (o *OAuthService) GetRequestToken(client *http.Client) os.Error {
-	request := NewRequest("POST", o.RequestUrl, nil, nil)
+	params := map[string]string{
+		"oauth_callback": o.Config.Callback,
+	}
+	request := NewRequest("POST", o.RequestUrl, params, nil)
 	response, err := o.Send(request, client)
 	if err != nil {
 		return err
@@ -183,13 +193,12 @@ type Signer interface {
 }
 
 // A Signer which implements the HMAC-SHA1 signing algorithm.
-type HmacSha1Signer struct {}
+type HmacSha1Signer struct{}
 
 // Given an unsigned request, add the appropriate OAuth Authorization header
 // using the HMAC-SHA1 algorithm.
 func (s *HmacSha1Signer) Sign(request *Request, config *OAuthConfig) {
 	oauthParams := map[string]string{
-		"oauth_callback":         config.Callback,
 		"oauth_consumer_key":     config.ConsumerKey,
 		"oauth_nonce":            s.generateNonce(),
 		"oauth_signature_method": "HMAC-SHA1",
@@ -220,9 +229,10 @@ func (s *HmacSha1Signer) Sign(request *Request, config *OAuthConfig) {
 	headerParts := make([]string, len(oauthParams))
 	var i = 0
 	for key, value := range oauthParams {
-		headerParts[i] = http.URLEscape(key) + "=\"" + http.URLEscape(value) + "\""
+		headerParts[i] = Rfc3986Escape(key) + "=\"" + Rfc3986Escape(value) + "\""
 		i += 1
 	}
+
 	oauthHeader := "OAuth " + strings.Join(headerParts, ", ")
 	request.Headers["Authorization"] = oauthHeader
 }
@@ -240,10 +250,28 @@ func (HmacSha1Signer) encodeParameters(params map[string]string) string {
 	sort.Strings(keys)
 	for i, key := range keys {
 		value := params[key]
-		encoded := http.URLEscape(key) + "=" + http.URLEscape(value)
+		encoded := Rfc3986Escape(key) + "=" + Rfc3986Escape(value)
 		encodedParts[i] = encoded
 	}
 	return http.URLEscape(strings.Join(encodedParts, "&"))
+}
+
+// Escapes a string more in line with Rfc3986 than http.URLEscape.
+// URLEscape was converting spaces to "+" instead of "%20", which was messing up
+// the signing of requests.
+func Rfc3986Escape(input string) string {
+	var output bytes.Buffer
+	// Convert string to bytes because iterating over a unicode string
+	// in go parses runes, not bytes.
+	for _, c := range []byte(input) {
+		if strings.IndexAny(string(c), "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._~") == -1 {
+			encoded := fmt.Sprintf("%%%X", c)
+			output.Write([]uint8(encoded))
+		} else {
+			output.WriteByte(uint8(c))
+		}
+	}
+	return string(output.Bytes())
 }
 
 // Generate a unique nonce value.  Should not be called more than once per
@@ -255,14 +283,4 @@ func (HmacSha1Signer) generateNonce() string {
 	h := sha1.New()
 	h.Write([]byte(token))
 	return fmt.Sprintf("%x", h.Sum())
-}
-
-// URL-encode a map of key/value pairs.
-func UrlEncode(params map[string]string) string {
-	parts := make([]string, len(params))
-	for key, value := range params {
-		encoded := http.URLEscape(key) + "=" + http.URLEscape(value)
-		parts = append(parts, encoded)
-	}
-	return strings.Join(parts, "&")
 }

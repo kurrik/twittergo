@@ -21,6 +21,7 @@ import (
 	"os"
 	"path"
 	"gob"
+	"bufio"
 )
 
 func PrintValue(value reflect.Value, indent string) {
@@ -79,11 +80,12 @@ func PrintTweets(tweets []twittergo.Status) {
 // Prompts the user and returns their input as a string.
 func PromptUser(prompt string) string {
 	fmt.Print(prompt + ": ")
-	var input string
-	if _, err := fmt.Scanln(&input); err != nil {
+	reader := bufio.NewReader(os.Stdout)
+	line, _, err := reader.ReadLine()
+	if err != nil {
 		return ""
 	}
-	return input
+	return string(line)
 }
 
 // Returns the directory path of the directory this executable is stored in.
@@ -123,6 +125,9 @@ func LoadConfig(path string) (*twittergo.OAuthConfig, os.Error) {
 }
 
 func main() {
+	fmt.Println(twittergo.Rfc3986Escape("Hopefully \"Updating the authenticating user's status, also known at tweeting.\" - https://dev.twitter.com/docs/api/1/post/statuses/update"))
+	fmt.Println(twittergo.Rfc3986Escape("Testing Unicode: ☃ - http://unicodesnowmanforyou.com/"))
+
 	path := path.Join(GetExecutableDirectory(), "config.bin")
 	config, err := LoadConfig(path)
 	if err != nil {
@@ -206,6 +211,15 @@ func main() {
 	fmt.Println("\nGetting https://twitter.com/#!/kurrik/status/108988671176359937")
 	fmt.Println("-----------------------")
 	tweet, err := client.GetStatus("108988671176359937", nil)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintStruct(tweet, "")
+
+	fmt.Println("\nPosting an update")
+	fmt.Println("-----------------------")
+	statusText := PromptUser("What's happening?")
+	tweet, err = client.Update(statusText, nil)
 	if err != nil {
 		fmt.Println("Error:", err)
 	}

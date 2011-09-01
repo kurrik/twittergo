@@ -19,6 +19,8 @@ import (
 	"os"
 	"bytes"
 	"io"
+	"fmt"
+	"strings"
 )
 
 // Abstracts a simple HTTP request.  Only one set of parameters are supported.
@@ -53,8 +55,9 @@ func (r *Request) GetHttpRequest() (*http.Request, os.Error) {
 		if r.Method == "GET" {
 			url += "?" + params
 		} else {
+			fmt.Println("Params:", string(params))
 			body = bytes.NewBuffer([]byte(params))
-			r.Headers["Content-Type"] = "application/x-www-form-urlencoded"
+			r.Headers["Content-Type"] = "application/x-www-form-urlencoded;charset=utf-8"
 		}
 	}
 	header := http.Header{}
@@ -67,4 +70,17 @@ func (r *Request) GetHttpRequest() (*http.Request, os.Error) {
 	}
 	request.Header = header
 	return request, nil
+}
+
+// URL-encode a map of key/value pairs.
+func UrlEncode(params map[string]string) string {
+	parts := make([]string, len(params))
+	i := 0
+	for key, value := range params {
+		fmt.Println("key", key, "value", value)
+		encoded := Rfc3986Escape(key) + "=" + Rfc3986Escape(value)
+		parts[i] = encoded
+		i++
+	}
+	return strings.Join(parts, "&")
 }
