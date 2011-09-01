@@ -149,6 +149,7 @@ type UserMention struct {
 
 // Implements optional parameters which may be passed to an API method.
 type Parameters struct {
+	overrides          map[string]string
 	ContributorDetails interface{} `contributor_details`
 	Count              interface{}
 	ExcludeReplies     interface{} `exclude_replies`
@@ -171,7 +172,7 @@ func (p *Parameters) Map() map[string]string {
 	for i := 0; i < pType.NumField(); i++ {
 		field := pType.Field(i)
 		value := reflect.Indirect(pValue.FieldByName(field.Name))
-		if value.IsNil() != true {
+		if value.IsNil() != true && field.Name != "overrides" {
 			key := string(field.Tag)
 			if key == "" {
 				key = strings.ToLower(field.Name)
@@ -179,7 +180,20 @@ func (p *Parameters) Map() map[string]string {
 			params[key] = fmt.Sprintf("%v", value.Interface())
 		}
 	}
+	for key, value := range p.overrides {
+		params[key] = value
+	}
 	return params
+}
+
+// Sets an "override" parameter value, creating a new Parameters if needed.
+func (p *Parameters) Set(key string, value string) *Parameters {
+	if p == nil {
+		p = new(Parameters)
+		p.overrides = map[string]string{}
+	}
+	p.overrides[key] = value
+	return p
 }
 
 // Implements a Twitter client.
@@ -236,8 +250,12 @@ func (c *Client) parseJson(response *http.Response, out interface{}) os.Error {
 // Makes a request for a specific path in the API, using supplied params and
 // method, and signing the request if needed.  The result is decoded into
 // the supplied interface.
-func (c *Client) getJson(method string, path string, params map[string]string, auth bool, out interface{}) os.Error {
-	request := NewRequest(method, c.BaseUrl+path+".json", params, nil)
+func (c *Client) getJson(method string, path string, params *Parameters, auth bool, out interface{}) os.Error {
+	var paramsMap map[string]string = nil
+	if params != nil {
+		paramsMap = params.Map()
+	}
+	request := NewRequest(method, c.BaseUrl+path+".json", paramsMap, nil)
 	response, err := c.sendRequest(request, auth)
 	if err != nil {
 		return err
@@ -251,12 +269,14 @@ func (c *Client) getJson(method string, path string, params map[string]string, a
 // Makes a request for a path which contains a feed of status updates.
 func (c *Client) getStatuses(path string, params *Parameters, auth bool) ([]Status, os.Error) {
 	var statuses []Status
-	var paramsMap map[string]string = nil
-	if params != nil {
-		paramsMap = params.Map()
-	}
-	err := c.getJson("GET", path, paramsMap, auth, &statuses)
+	err := c.getJson("GET", path, params, auth, &statuses)
 	return statuses, err
+}
+
+// Makes a request for a path which contains a feed of arbitrary data.
+func (c *Client) getData(path string, params *Parameters, auth bool, out interface{}) os.Error {
+	err := c.getJson("GET", path, params, auth, &out)
+	return err
 }
 
 // Issues a request for an OAuth Request Token.
@@ -283,6 +303,7 @@ func (c *Client) GetHomeTimeline(params *Parameters) ([]Status, os.Error) {
 	return c.getStatuses("statuses/retweeted_by_me", params, true)
 }
 
+// Returns the mentions of the current user.
 func (c *Client) GetMentions(params *Parameters) ([]Status, os.Error) {
 	return c.getStatuses("statuses/mentions", params, true)
 }
@@ -308,16 +329,44 @@ func (c *Client) GetRetweetsOfMe(params *Parameters) ([]Status, os.Error) {
 }
 
 // Returns the timeline for a user, defaults to the current authenticated user.
-func (c *Client) GetUserTimeline(params *Parameters) ([]Status, os.Error) {
-	return c.getStatuses("statuses/user_timeline", params, true)
+func (c *Client) GetUserTimeline(auth bool, params *Parameters) ([]Status, os.Error) {
+	return c.getStatuses("statuses/user_timeline", params, auth)
 }
 
 // Returns the retweets to the specified user.
-func (c *Client) GetRetweetedToUser(params *Parameters) ([]Status, os.Error) {
-	return c.getStatuses("statuses/retweeted_to_user", params, true)
+func (c *Client) GetRetweetedToUser(auth bool, params *Parameters) ([]Status, os.Error) {
+	return c.getStatuses("statuses/retweeted_to_user", params, auth)
 }
 
 // Returns the retweets from the specified user.
-func (c *Client) GetRetweetedByUser(params *Parameters) ([]Status, os.Error) {
-	return c.getStatuses("statuses/retweeted_by_user", params, true)
+func (c *Client) GetRetweetedByUser(auth bool, params *Parameters) ([]Status, os.Error) {
+	return c.getStatuses("statuses/retweeted_by_user", params, auth)
+}
+
+// Returns the users who have retweeted the specified status.
+func (c *Client) GetStatusRetweetedBy(id string, auth bool, params *Parameters) ([]User, os.Error) {
+	var users []User
+	err := c.getData("statuses/"+id+"/retweeted_by", params, auth, &users)
+	return users, err
+}
+
+// Returns the IDs of users who have retweeted the specified status.
+// Numerical IDs are not supported - just convert the string array.
+func (c *Client) GetStatusRetweetedByIds(id string, params *Parameters) ([]string, os.Error) {
+	var ids []string
+	params = params.Set("stringify_ids", "true")
+	err := c.getData("statuses/"+id+"/retweeted_by/ids", params, true, &ids)
+	return ids, err
+}
+
+// Get the retweets of a given status.
+func (c *Client) GetStatusRetweets(id string, params *Parameters) ([]Status, os.Error) {
+	return c.getStatuses("statuses/retweets/"+id, params, true)
+}
+
+// Gets a single status
+func (c *Client) GetStatus(id string, params *Parameters) (Status, os.Error) {
+	var status Status
+	err := c.getData("statuses/show/"+id, params, false, &status)
+	return status, err
 }

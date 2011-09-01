@@ -181,7 +181,7 @@ func main() {
 
 	fmt.Println("\nGetting ChromiumDev's retweets")
 	fmt.Println("-----------------------")
-	tweets, err = client.GetRetweetedByUser(&twittergo.Parameters{
+	tweets, err = client.GetRetweetedByUser(true, &twittergo.Parameters{
 		Id:    "ChromiumDev",
 		Count: 1,
 	})
@@ -189,4 +189,25 @@ func main() {
 		fmt.Println("Error:", err)
 	}
 	PrintTweets(tweets)
+
+	fmt.Println("\nGetting users who retweeted https://twitter.com/#!/kurrik/status/108988671176359937")
+	fmt.Println("-----------------------")
+	users, err := client.GetStatusRetweetedBy("108988671176359937", true, nil)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintArray(users, "")
+	ids, err := client.GetStatusRetweetedByIds("108988671176359937", nil)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintArray(ids, "")
+
+	fmt.Println("\nGetting https://twitter.com/#!/kurrik/status/108988671176359937")
+	fmt.Println("-----------------------")
+	tweet, err := client.GetStatus("108988671176359937", nil)
+	if err != nil {
+		fmt.Println("Error:", err)
+	}
+	PrintStruct(tweet, "")
 }
