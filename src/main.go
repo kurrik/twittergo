@@ -83,16 +83,11 @@ func PromptUser(prompt string) string {
 		fmt.Print(prompt + ": ")
 	}
 	reader := bufio.NewReader(os.Stdin)
-	buffer := new(bytes.Buffer)
-	for {
-		char, err := reader.ReadByte()
-		if err != nil || char == '\n' {
-			break
-		}
-		buffer.WriteByte(char)
+	line, _, err := reader.ReadLine()
+	if err != nil {
+		return ""
 	}
-	fmt.Println("GOT", buffer.String())
-	return buffer.String()
+	return string(line)
 }
 
 // Encodes a /bin/stty state as a string.
