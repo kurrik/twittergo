@@ -20,8 +20,9 @@ REST API endpoints, and you can browse through them using up/down arrows.
 
 Requirements:
 -----------------------------
-Only really tested on Linux at this point.  The library should be pretty
-portable, but the main executable may not be.
+The main client is primarily tested on Linux and secondarily on Mac.
+
+The library should be pretty portable, the main executable may not be.
 
 Install the following:
   Go:    http://golang.org
