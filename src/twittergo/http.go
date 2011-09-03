@@ -19,7 +19,6 @@ import (
 	"os"
 	"bytes"
 	"io"
-	"fmt"
 	"strings"
 )
 
@@ -55,7 +54,6 @@ func (r *Request) GetHttpRequest() (*http.Request, os.Error) {
 		if r.Method == "GET" {
 			url += "?" + params
 		} else {
-			fmt.Println("Params:", string(params))
 			body = bytes.NewBuffer([]byte(params))
 			r.Headers["Content-Type"] = "application/x-www-form-urlencoded;charset=utf-8"
 		}
@@ -77,7 +75,6 @@ func UrlEncode(params map[string]string) string {
 	parts := make([]string, len(params))
 	i := 0
 	for key, value := range params {
-		fmt.Println("key", key, "value", value)
 		encoded := Rfc3986Escape(key) + "=" + Rfc3986Escape(value)
 		parts[i] = encoded
 		i++

@@ -155,7 +155,6 @@ type Parameters struct {
 	Count              interface{}
 	DisplayCoordinates interface{} `display_coordinates`
 	ExcludeReplies     interface{} `exclude_replies`
-	Id                 interface{}
 	IncludeEntities    interface{} `include_entities`
 	IncludeRts         interface{} `include_rts`
 	InReplyToStatusId  interface{} `in_reply_to_status_id`
@@ -207,12 +206,12 @@ func (p *Parameters) Set(key string, value string) *Parameters {
 type Client struct {
 	BaseUrl    string
 	OAuth      *OAuthService
+	User       *OAuthUserConfig
 	HttpClient *http.Client
 }
 
 // Creates a new Twitter client with the supplied OAuth configuration.
-func NewClient(config *OAuthConfig) *Client {
-	config.Realm = "https://api.twitter.com"
+func NewClient(config *OAuthConfig, user *OAuthUserConfig) *Client {
 	oauth := &OAuthService{
 		RequestUrl:   "http://api.twitter.com/oauth/request_token",
 		AuthorizeUrl: "https://api.twitter.com/oauth/authorize",
@@ -224,14 +223,20 @@ func NewClient(config *OAuthConfig) *Client {
 		BaseUrl:    "https://api.twitter.com/1/",
 		OAuth:      oauth,
 		HttpClient: new(http.Client),
+		User:       user,
 	}
+}
+
+// Changes the user authorization credentials for this client.
+func (c *Client) SetUser(user *OAuthUserConfig) {
+	c.User = user
 }
 
 // Sends a HTTP request through this instance's HTTP client.  If auth is
 // requested, then the request is signed with the configured OAuth parameters.
 func (c *Client) sendRequest(request *Request, auth bool) (*http.Response, os.Error) {
 	if auth {
-		return c.OAuth.Send(request, c.HttpClient)
+		return c.OAuth.Send(request, c.User, c.HttpClient)
 	}
 	httpRequest, err := request.GetHttpRequest()
 	response, err := c.HttpClient.Do(httpRequest)
@@ -283,17 +288,17 @@ func (c *Client) getStatuses(path string, params *Parameters, auth bool) ([]Stat
 
 // Issues a request for an OAuth Request Token.
 func (c *Client) GetRequestToken() os.Error {
-	return c.OAuth.GetRequestToken(c.HttpClient)
+	return c.OAuth.GetRequestToken(c.User, c.HttpClient)
 }
 
 // Returns an URL which the authorizing user should visit to grant access.
 func (c *Client) GetAuthorizeUrl() (string, os.Error) {
-	return c.OAuth.GetAuthorizeUrl()
+	return c.OAuth.GetAuthorizeUrl(c.User)
 }
 
 // Issues a request for an OAuth Access Token.
 func (c *Client) GetAccessToken(token string, verifier string) os.Error {
-	return c.OAuth.GetAccessToken(token, verifier, c.HttpClient)
+	return c.OAuth.GetAccessToken(token, verifier, c.User, c.HttpClient)
 }
 
 /*
@@ -341,7 +346,8 @@ func (c *Client) GetRetweetedToUser(auth bool, params *Parameters) ([]Status, os
 }
 
 // Returns the retweets from the specified user.
-func (c *Client) GetRetweetedByUser(auth bool, params *Parameters) ([]Status, os.Error) {
+func (c *Client) GetRetweetedByUser(id string, auth bool, params *Parameters) ([]Status, os.Error) {
+	params = params.Set("id", id)
 	return c.getStatuses("statuses/retweeted_by_user", params, auth)
 }
 
