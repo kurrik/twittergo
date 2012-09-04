@@ -71,7 +71,6 @@ func (r APIResponse) RateLimitReset() time.Time {
 
 // Parses a JSON encoded HTTP response into the supplied interface.
 func (r APIResponse) Parse(out interface{}) (err error) {
-	fmt.Println(r.Header)
 	switch r.StatusCode {
 	case STATUS_LIMIT:
 		err = RateLimitError{
