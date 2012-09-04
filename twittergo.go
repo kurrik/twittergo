@@ -15,11 +15,11 @@
 package twittergo
 
 import (
+	"fmt"
 	"github.com/kurrik/oauth1a"
 	"net/http"
 	"net/url"
 	"strings"
-	"fmt"
 )
 
 // Implements a Twitter client.
@@ -31,15 +31,30 @@ type Client struct {
 }
 
 // Creates a new Twitter client with the supplied OAuth configuration.
+// Supports the use of HTTP proxies through the $HTTP_PROXY env var.
+// For example:
+//     export HTTP_PROXY=http://localhost:8888
 func NewClient(config *oauth1a.ClientConfig, user *oauth1a.UserConfig) *Client {
 	var (
-		host = "api.twitter.com"
-		base = "https://" + host
+		host      = "api.twitter.com"
+		base      = "https://" + host
+		req, _    = http.NewRequest("GET", "https://api.twitter.com", nil)
+		proxy, _  = http.ProxyFromEnvironment(req)
+		transport *http.Transport
 	)
+	if proxy != nil {
+		transport = &http.Transport{
+			Proxy: http.ProxyURL(proxy),
+		}
+	} else {
+		transport = &http.Transport{}
+	}
 	return &Client{
-		Host:       host,
-		HttpClient: new(http.Client),
-		User:       user,
+		Host: host,
+		HttpClient: &http.Client{
+			Transport: transport,
+		},
+		User: user,
 		OAuth: &oauth1a.Service{
 			RequestURL:   base + "/oauth/request_token",
 			AuthorizeURL: base + "/oauth/authorize",
@@ -71,4 +86,3 @@ func (c *Client) SendRequest(req *http.Request) (resp *APIResponse, err error) {
 	resp = (*APIResponse)(r)
 	return
 }
-
