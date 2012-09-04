@@ -19,7 +19,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"encoding/json"
 	"fmt"
 )
 
@@ -57,7 +56,7 @@ func (c *Client) SetUser(user *oauth1a.UserConfig) {
 }
 
 // Sends a HTTP request through this instance's HTTP client.
-func (c *Client) SendRequest(req *http.Request) (resp *http.Response, err error) {
+func (c *Client) SendRequest(req *http.Request) (resp *APIResponse, err error) {
 	u := req.URL.String()
 	if !strings.HasPrefix(u, "http") {
 		u = fmt.Sprintf("https://%v%v", c.Host, u)
@@ -67,12 +66,9 @@ func (c *Client) SendRequest(req *http.Request) (resp *http.Response, err error)
 		}
 	}
 	c.OAuth.Sign(req, c.User)
-	resp, err = c.HttpClient.Do(req)
+	var r *http.Response
+	r, err = c.HttpClient.Do(req)
+	resp = (*APIResponse)(r)
 	return
 }
 
-// Parses a JSON encoded HTTP response into the supplied interface.
-func ParseJson(resp *http.Response, out interface{}) error {
-	defer resp.Body.Close()
-	return json.NewDecoder(resp.Body).Decode(out)
-}

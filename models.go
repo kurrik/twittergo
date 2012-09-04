@@ -15,8 +15,79 @@
 package twittergo
 
 import (
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
 	"strconv"
+	"time"
 )
+
+const (
+	H_LIMIT        = "X-RateLimit-Limit"
+	H_LIMIT_REMAIN = "X-RateLimit-Remaining"
+	H_LIMIT_RESET  = "X-RateLimit-Reset"
+)
+
+const (
+	STATUS_LIMIT = 420
+)
+
+type RateLimitError struct {
+	Limit     uint32
+	Remaining uint32
+	Reset     time.Time
+}
+
+func (e RateLimitError) Error() string {
+	msg := "Rate limit: %v, Remaining: %v, Reset: %v"
+	return fmt.Sprintf(msg, e.Limit, e.Remaining, e.Reset)
+}
+
+type APIResponse http.Response
+
+func (r APIResponse) HasRateLimit() bool {
+	return r.Header.Get(H_LIMIT) != ""
+}
+
+func (r APIResponse) RateLimit() uint32 {
+	h := r.Header.Get(H_LIMIT)
+	i, _ := strconv.ParseUint(h, 10, 32)
+	return uint32(i)
+}
+
+func (r APIResponse) RateLimitRemaining() uint32 {
+	h := r.Header.Get(H_LIMIT_REMAIN)
+	i, _ := strconv.ParseUint(h, 10, 32)
+	return uint32(i)
+}
+
+func (r APIResponse) RateLimitReset() time.Time {
+	h := r.Header.Get(H_LIMIT_RESET)
+	i, _ := strconv.ParseUint(h, 10, 32)
+	t := time.Unix(int64(i), 0)
+	return t
+}
+
+// Parses a JSON encoded HTTP response into the supplied interface.
+func (r APIResponse) Parse(out interface{}) (err error) {
+	fmt.Println(r.Header)
+	switch r.StatusCode {
+	case STATUS_LIMIT:
+		err = RateLimitError{
+			Limit:     r.RateLimit(),
+			Remaining: r.RateLimitRemaining(),
+			Reset:     r.RateLimitReset(),
+		}
+		return
+	}
+	defer r.Body.Close()
+	err = json.NewDecoder(r.Body).Decode(out)
+	if err == io.EOF {
+		err = nil
+	}
+	return
+}
 
 type User map[string]interface{}
 

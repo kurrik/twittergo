@@ -44,7 +44,7 @@ func main() {
 		err    error
 		client *twittergo.Client
 		req    *http.Request
-		resp   *http.Response
+		resp   *twittergo.APIResponse
 		user   *twittergo.User
 	)
 	client, err = LoadCredentials()
@@ -54,21 +54,27 @@ func main() {
 	}
 	req, err = http.NewRequest("GET", "/1/account/verify_credentials.json", nil)
 	if err != nil {
-		fmt.Println("Could not parse request: %v\n", err)
+		fmt.Printf("Could not parse request: %v\n", err)
 		os.Exit(1)
 	}
 	resp, err = client.SendRequest(req)
 	if err != nil {
-		fmt.Println("Could not send request: %v\n", err)
+		fmt.Printf("Could not send request: %v\n", err)
 		os.Exit(1)
 	}
 	user = &twittergo.User{}
-	err = twittergo.ParseJson(resp, user)
+	err = resp.Parse(user)
 	if err != nil {
-		fmt.Println("Problem parsing response: %v\n", err)
+		fmt.Printf("Problem parsing response: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println(user)
-	fmt.Println(user.Id())
-	fmt.Println(user.Name())
+	fmt.Printf("ID:                   %v\n", user.Id())
+	fmt.Printf("Name:                 %v\n", user.Name())
+	if resp.HasRateLimit() {
+		fmt.Printf("Rate limit:           %v\n", resp.RateLimit())
+		fmt.Printf("Rate limit remaining: %v\n", resp.RateLimitRemaining())
+		fmt.Printf("Rate limit reset:     %v\n", resp.RateLimitReset())
+	} else {
+		fmt.Printf("Could not parse rate limit from response.\n")
+	}
 }
