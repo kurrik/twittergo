@@ -30,8 +30,31 @@ const (
 )
 
 const (
-	STATUS_LIMIT = 420
+	STATUS_LIMIT   = 420
+	STATUS_INVALID = 400
 )
+
+type Error struct {
+	Code int
+	Message string
+}
+
+func (e Error) Error() string {
+	msg := "Error %v: %v"
+	return fmt.Sprintf(msg, e.Code, e.Message)
+}
+
+type Errors struct {
+	Errors []Error
+}
+
+func (e Errors) Error() string {
+	msg := ""
+	for _, err := range e.Errors {
+		msg += err.Error() + ". "
+	}
+	return msg
+}
 
 type RateLimitError struct {
 	Limit     uint32
@@ -72,6 +95,12 @@ func (r APIResponse) RateLimitReset() time.Time {
 // Parses a JSON encoded HTTP response into the supplied interface.
 func (r APIResponse) Parse(out interface{}) (err error) {
 	switch r.StatusCode {
+	case STATUS_INVALID:
+		e := &Errors{}
+		defer r.Body.Close()
+		json.NewDecoder(r.Body).Decode(e)
+		err = *e
+		return
 	case STATUS_LIMIT:
 		err = RateLimitError{
 			Limit:     r.RateLimit(),
