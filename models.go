@@ -24,13 +24,13 @@ import (
 )
 
 const (
-	H_LIMIT        = "X-RateLimit-Limit"
-	H_LIMIT_REMAIN = "X-RateLimit-Remaining"
-	H_LIMIT_RESET  = "X-RateLimit-Reset"
+	H_LIMIT        = "X-Rate-Limit-Limit"
+	H_LIMIT_REMAIN = "X-Rate-Limit-Remaining"
+	H_LIMIT_RESET  = "X-Rate-Limit-Reset"
 )
 
 const (
-	STATUS_LIMIT = 420
+	STATUS_LIMIT = 429
 )
 
 type RateLimitError struct {
