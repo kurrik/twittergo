@@ -2,6 +2,13 @@ twittergo
 =========
 This project implements a Go client library for the Twitter APIs.
 
+The goal of this project is to provide a thin veneer over my `oauth1a` library
+in order to simplify access to Twitter's APIs from Go.  Where possible, I've
+tried to defer to native objects (use of http requests for example).  
+Additionally, responses could be parsed directly as JSON, but some wrapper
+types have been defined in order to provide some convenience methods for
+accessing data.
+
 Installing
 ----------
 Run
