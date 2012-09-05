@@ -184,3 +184,18 @@ func (t Tweet) Text() string {
 func (t Tweet) User() User {
 	return User(t["user"].(map[string]interface{}))
 }
+
+// It's a list of Tweets!
+type Tweets []Tweet
+
+// It's a structured list of Tweets!
+type SearchResults map[string]interface{}
+
+func (r SearchResults) Statuses() Tweets {
+	data := r["statuses"].([]interface{})
+	tweets := make([]Tweet, len(data))
+	for i, t := range data {
+		tweets[i] = Tweet(t.(map[string]interface{}))
+	}
+	return tweets
+}
