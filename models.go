@@ -24,9 +24,9 @@ import (
 )
 
 const (
-	H_LIMIT              = "X-RateLimit-Limit"
-	H_LIMIT_REMAIN       = "X-RateLimit-Remaining"
-	H_LIMIT_RESET        = "X-RateLimit-Reset"
+	H_LIMIT              = "X-Rate-Limit-Limit"
+	H_LIMIT_REMAIN       = "X-Rate-Limit-Remaining"
+	H_LIMIT_RESET        = "X-Rate-Limit-Reset"
 	H_MEDIA_LIMIT        = "X-MediaRateLimit-Limit"
 	H_MEDIA_LIMIT_REMAIN = "X-MediaRateLimit-Remaining"
 	H_MEDIA_LIMIT_RESET  = "X-MediaRateLimit-Reset"
@@ -35,7 +35,7 @@ const (
 const (
 	STATUS_INVALID  = 400
 	STATUS_NOTFOUND = 404
-	STATUS_LIMIT    = 420
+	STATUS_LIMIT    = 429
 	STATUS_GATEWAY  = 502
 )
 

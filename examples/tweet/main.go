@@ -57,7 +57,7 @@ func main() {
 	data := url.Values{}
 	data.Set("status", fmt.Sprintf("Hello %v!", time.Now()))
 	body := strings.NewReader(data.Encode())
-	req, err = http.NewRequest("POST", "/1/statuses/update.json", body)
+	req, err = http.NewRequest("POST", "/1.1/statuses/update.json", body)
 	if err != nil {
 		fmt.Printf("Could not parse request: %v\n", err)
 		os.Exit(1)

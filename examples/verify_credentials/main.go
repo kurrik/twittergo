@@ -52,7 +52,7 @@ func main() {
 		fmt.Printf("Could not parse CREDENTIALS file: %v\n", err)
 		os.Exit(1)
 	}
-	req, err = http.NewRequest("GET", "/1/account/verify_credentials.json", nil)
+	req, err = http.NewRequest("GET", "/1.1/account/verify_credentials.json", nil)
 	if err != nil {
 		fmt.Printf("Could not parse request: %v\n", err)
 		os.Exit(1)
