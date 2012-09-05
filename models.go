@@ -24,14 +24,19 @@ import (
 )
 
 const (
-	H_LIMIT        = "X-Rate-Limit-Limit"
-	H_LIMIT_REMAIN = "X-Rate-Limit-Remaining"
-	H_LIMIT_RESET  = "X-Rate-Limit-Reset"
+	H_LIMIT              = "X-Rate-Limit-Limit"
+	H_LIMIT_REMAIN       = "X-Rate-Limit-Remaining"
+	H_LIMIT_RESET        = "X-Rate-Limit-Reset"
+	H_MEDIA_LIMIT        = "X-MediaRateLimit-Limit"
+	H_MEDIA_LIMIT_REMAIN = "X-MediaRateLimit-Remaining"
+	H_MEDIA_LIMIT_RESET  = "X-MediaRateLimit-Reset"
 )
 
 const (
-	STATUS_LIMIT   = 429
-	STATUS_INVALID = 400
+	STATUS_INVALID  = 400
+	STATUS_NOTFOUND = 404
+	STATUS_LIMIT    = 429
+	STATUS_GATEWAY  = 502
 )
 
 type Error struct {
@@ -92,9 +97,36 @@ func (r APIResponse) RateLimitReset() time.Time {
 	return t
 }
 
+func (r APIResponse) HasMediaRateLimit() bool {
+	return r.Header.Get(H_MEDIA_LIMIT) != ""
+}
+
+func (r APIResponse) MediaRateLimit() uint32 {
+	h := r.Header.Get(H_MEDIA_LIMIT)
+	i, _ := strconv.ParseUint(h, 10, 32)
+	return uint32(i)
+}
+
+func (r APIResponse) MediaRateLimitRemaining() uint32 {
+	h := r.Header.Get(H_MEDIA_LIMIT_REMAIN)
+	i, _ := strconv.ParseUint(h, 10, 32)
+	return uint32(i)
+}
+
+func (r APIResponse) MediaRateLimitReset() time.Time {
+	h := r.Header.Get(H_MEDIA_LIMIT_RESET)
+	i, _ := strconv.ParseUint(h, 10, 32)
+	t := time.Unix(int64(i), 0)
+	return t
+}
+
 // Parses a JSON encoded HTTP response into the supplied interface.
 func (r APIResponse) Parse(out interface{}) (err error) {
 	switch r.StatusCode {
+	case STATUS_NOTFOUND:
+		fallthrough
+	case STATUS_GATEWAY:
+		fallthrough
 	case STATUS_INVALID:
 		e := &Errors{}
 		defer r.Body.Close()
