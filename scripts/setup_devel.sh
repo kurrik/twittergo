@@ -31,7 +31,7 @@ fi
   
 if [ -e $PROJPATH ]; then
   yellow "Removing $PROJPATH"
-  rm $PROJPATH
+  rm -rf $PROJPATH
 fi
 
 yellow "Ensuring $PROJROOT is created"
