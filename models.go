@@ -35,7 +35,7 @@ const (
 )
 
 type Error struct {
-	Code int
+	Code    int
 	Message string
 }
 
@@ -117,6 +117,7 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 	return
 }
 
+// It's a user!
 type User map[string]interface{}
 
 func (u User) Id() uint64 {
@@ -130,4 +131,24 @@ func (u User) IdStr() string {
 
 func (u User) Name() string {
 	return u["name"].(string)
+}
+
+// It's a Tweet! (Adorably referred to by the API as a "status").
+type Tweet map[string]interface{}
+
+func (t Tweet) Id() uint64 {
+	id, _ := strconv.ParseUint(t["id_str"].(string), 10, 64)
+	return id
+}
+
+func (t Tweet) IdStr() string {
+	return t["id_str"].(string)
+}
+
+func (t Tweet) Text() string {
+	return t["text"].(string)
+}
+
+func (t Tweet) User() User {
+	return User(t["user"].(map[string]interface{}))
 }
