@@ -165,6 +165,10 @@ func (u User) Name() string {
 	return u["name"].(string)
 }
 
+func (u User) ScreenName() string {
+	return u["screen_name"].(string)
+}
+
 // It's a Tweet! (Adorably referred to by the API as a "status").
 type Tweet map[string]interface{}
 
@@ -185,17 +189,12 @@ func (t Tweet) User() User {
 	return User(t["user"].(map[string]interface{}))
 }
 
-// It's a list of Tweets!
-type Tweets []Tweet
+func (t Tweet) CreatedAt() time.Time {
+	created, _ := time.Parse(time.RubyDate, t["created_at"].(string))
+	return created
+}
 
 // It's a structured list of Tweets!
-type SearchResults map[string]interface{}
-
-func (r SearchResults) Statuses() Tweets {
-	data := r["statuses"].([]interface{})
-	tweets := make([]Tweet, len(data))
-	for i, t := range data {
-		tweets[i] = Tweet(t.(map[string]interface{}))
-	}
-	return tweets
+type SearchResults struct {
+	Statuses []Tweet
 }

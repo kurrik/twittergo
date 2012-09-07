@@ -23,6 +23,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
 
 func LoadCredentials() (client *twittergo.Client, err error) {
@@ -72,8 +73,11 @@ func main() {
 		fmt.Printf("Problem parsing response: %v\n", err)
 		os.Exit(1)
 	}
-	for _, tweet := range results.Statuses() {
-		fmt.Printf("[%v] %v\n", tweet.Id(), tweet.Text())
+	for i, tweet := range results.Statuses {
+		user := tweet.User()
+		fmt.Printf("%v.) %v\n", i+1, tweet.Text())
+		fmt.Printf("From %v (@%v) ", user.Name(), user.ScreenName())
+		fmt.Printf("at %v\n\n", tweet.CreatedAt().Format(time.RFC1123))
 	}
 	if resp.HasRateLimit() {
 		fmt.Printf("Rate limit:           %v\n", resp.RateLimit())
