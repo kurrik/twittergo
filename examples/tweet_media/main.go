@@ -86,7 +86,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	endpoint := "https://upload.twitter.com/1.1/statuses/update_with_media.json"
+	endpoint := "/1.1/statuses/update_with_media.json"
 	req, err = http.NewRequest("POST", endpoint, body)
 	if err != nil {
 		fmt.Printf("Could not parse request: %v\n", err)
