@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Implements a Twitter client library in Go.
 package twittergo
 
 import (
