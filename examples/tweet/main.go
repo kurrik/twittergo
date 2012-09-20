@@ -15,9 +15,9 @@
 package main
 
 import (
+	"../../" // Use github.com/kurrik/twittergo for your code.
 	"fmt"
 	"github.com/kurrik/oauth1a"
-	"github.com/kurrik/twittergo"
 	"io/ioutil"
 	"net/http"
 	"net/url"
