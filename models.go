@@ -172,9 +172,15 @@ func (u User) ScreenName() string {
 // It's a Tweet! (Adorably referred to by the API as a "status").
 type Tweet map[string]interface{}
 
-func (t Tweet) Id() uint64 {
-	id, _ := strconv.ParseUint(t["id_str"].(string), 10, 64)
-	return id
+func (t Tweet) Id() (id uint64) {
+	var (
+		err error
+		src = t["id_str"].(string)
+	)
+	if id, err = strconv.ParseUint(src, 10, 64); err != nil {
+		panic(fmt.Sprintf("Could not parse ID: %v", err))
+	}
+	return
 }
 
 func (t Tweet) IdStr() string {
@@ -189,12 +195,29 @@ func (t Tweet) User() User {
 	return User(t["user"].(map[string]interface{}))
 }
 
-func (t Tweet) CreatedAt() time.Time {
-	created, _ := time.Parse(time.RubyDate, t["created_at"].(string))
-	return created
+func (t Tweet) CreatedAt() (out time.Time) {
+	var (
+		err error
+		src = t["created_at"].(string)
+	)
+	if out, err = time.Parse(time.RubyDate, src); err != nil {
+		panic(fmt.Sprintf("Could not parse time: %v", err))
+	}
+	return
+}
+
+func (t Tweet) JSON() (out []byte) {
+	var err error
+	if out, err = json.MarshalIndent(t, "", "  "); err != nil {
+		panic(fmt.Sprintf("Problem converting to JSON: %v", err))
+	}
+	return
 }
 
 // It's a structured list of Tweets!
 type SearchResults struct {
 	Statuses []Tweet
 }
+
+// It's a less structured list of Tweets!
+type Timeline []Tweet
