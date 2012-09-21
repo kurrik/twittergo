@@ -172,6 +172,17 @@ func (u User) ScreenName() string {
 // It's a Tweet! (Adorably referred to by the API as a "status").
 type Tweet map[string]interface{}
 
+func (t *Tweet) UnmarshalJSON(b []byte) (err error) {
+	out := (*map[string]interface{})(t)
+	if err = json.Unmarshal(b, out); err == nil {
+		t = (*Tweet)(out)
+		c := make([]byte, len(b))
+		copy(c, b)
+		(*t)["json"] = c
+	}
+	return
+}
+
 func (t Tweet) Id() (id uint64) {
 	var (
 		err error
@@ -206,12 +217,8 @@ func (t Tweet) CreatedAt() (out time.Time) {
 	return
 }
 
-func (t Tweet) JSON() (out []byte) {
-	var err error
-	if out, err = json.MarshalIndent(t, "", "  "); err != nil {
-		panic(fmt.Sprintf("Problem converting to JSON: %v", err))
-	}
-	return
+func (t Tweet) JSON() []byte {
+	return t["json"].([]byte)
 }
 
 // It's a structured list of Tweets!
