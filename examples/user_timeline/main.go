@@ -109,6 +109,7 @@ package main
 
 import (
 	"../../" // Use github.com/kurrik/twittergo for your code.
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/kurrik/oauth1a"
@@ -159,6 +160,7 @@ func main() {
 		out     *os.File
 		query   url.Values
 		results *twittergo.Timeline
+		text    []byte
 	)
 	args = parseArgs()
 	if client, err = LoadCredentials(); err != nil {
@@ -214,7 +216,11 @@ func main() {
 			break
 		}
 		for _, tweet := range *results {
-			out.Write(tweet.JSON())
+			if text, err = json.Marshal(tweet); err != nil {
+				fmt.Printf("Could not encode Tweet: %v\n", err)
+				os.Exit(1)
+			}
+			out.Write(text)
 			out.Write([]byte("\n"))
 			max_id = tweet.Id() - 1
 			total += 1
