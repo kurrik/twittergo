@@ -15,9 +15,10 @@
 package twittergo
 
 import (
-	"encoding/json"
 	"fmt"
+	"github.com/kurrik/json"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -122,6 +123,7 @@ func (r APIResponse) MediaRateLimitReset() time.Time {
 
 // Parses a JSON encoded HTTP response into the supplied interface.
 func (r APIResponse) Parse(out interface{}) (err error) {
+	var b []byte
 	switch r.StatusCode {
 	case STATUS_NOTFOUND:
 		fallthrough
@@ -130,8 +132,10 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 	case STATUS_INVALID:
 		e := &Errors{}
 		defer r.Body.Close()
-		json.NewDecoder(r.Body).Decode(e)
-		err = *e
+		if b, err = ioutil.ReadAll(r.Body); err == nil {
+			json.Unmarshal(b, e)
+			err = *e
+		}
 		return
 	case STATUS_LIMIT:
 		err = RateLimitError{
@@ -142,7 +146,9 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		return
 	}
 	defer r.Body.Close()
-	err = json.NewDecoder(r.Body).Decode(out)
+	if b, err = ioutil.ReadAll(r.Body); err == nil {
+		err = json.Unmarshal(b, out)
+	}
 	if err == io.EOF {
 		err = nil
 	}
@@ -211,8 +217,15 @@ func (t Tweet) JSON() []byte {
 }
 
 // It's a structured list of Tweets!
-type SearchResults struct {
-	Statuses []Tweet
+type SearchResults map[string]interface{}
+
+func (sr SearchResults) Statuses() []Tweet {
+	var a []interface{} = sr["statuses"].([]interface{})
+	b := make([]Tweet, len(a))
+	for i, v := range a {
+		b[i] = v.(map[string]interface{})
+	}
+	return b
 }
 
 // It's a less structured list of Tweets!

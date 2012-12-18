@@ -73,7 +73,7 @@ func main() {
 		fmt.Printf("Problem parsing response: %v\n", err)
 		os.Exit(1)
 	}
-	for i, tweet := range results.Statuses {
+	for i, tweet := range results.Statuses() {
 		user := tweet.User()
 		fmt.Printf("%v.) %v\n", i+1, tweet.Text())
 		fmt.Printf("From %v (@%v) ", user.Name(), user.ScreenName())

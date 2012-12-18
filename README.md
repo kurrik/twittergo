@@ -34,6 +34,13 @@ then:
 
     go run examples/<path to example>
 
+Debugging
+---------
+To see what requests are being issued by the library, set up an HTTP proxy
+such as Charles Proxy and then set the following environment variable:
+
+    export HTTP_PROXY=http://localhost:8888
+
 Development
 -----------
 Clone the repo and then run:
