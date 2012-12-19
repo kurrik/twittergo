@@ -88,7 +88,7 @@ func (c *Client) GetAppToken() (err error) {
 		resp *http.Response
 		rb   []byte
 		rj   = map[string]interface{}{}
-		url  = fmt.Sprintf("https://oauth.twitter.com/2/token")
+		url  = fmt.Sprintf("https://%v/oauth2/token", c.Host)
 		ct   = "application/x-www-form-urlencoded;charset=UTF-8"
 		body = "grant_type=client_credentials"
 		ek   = oauth1a.Rfc3986Escape(c.OAuth.ClientConfig.ConsumerKey)
