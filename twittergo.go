@@ -25,7 +25,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 // Implements a Twitter client.
@@ -39,14 +38,6 @@ type Client struct {
 
 type BearerToken struct {
 	AccessToken string
-	Expires     *time.Time
-}
-
-func (t *BearerToken) Expired() bool {
-	if t.Expires == nil {
-		return false
-	}
-	return time.Now().After(*t.Expires)
 }
 
 // Creates a new Twitter client with the supplied OAuth configuration.
@@ -94,9 +85,10 @@ func (c *Client) SetUser(user *oauth1a.UserConfig) {
 func (c *Client) GetAppToken() (err error) {
 	var (
 		req  *http.Request
+		resp *http.Response
 		rb   []byte
-		rj   map[string]interface{}
-		url  = fmt.Sprintf("https://%v/oauth/2/token", c.Host)
+		rj   = map[string]interface{}{}
+		url  = fmt.Sprintf("https://oauth.twitter.com/2/token")
 		ct   = "application/x-www-form-urlencoded;charset=UTF-8"
 		body = "grant_type=client_credentials"
 		ek   = oauth1a.Rfc3986Escape(c.OAuth.ClientConfig.ConsumerKey)
@@ -105,33 +97,34 @@ func (c *Client) GetAppToken() (err error) {
 		ec   = base64.StdEncoding.EncodeToString([]byte(cred))
 		h    = fmt.Sprintf("Basic %v", ec)
 	)
-	req = http.NewRequest("POST", url, bytes.NewBufferString(body))
+	req, err = http.NewRequest("POST", url, bytes.NewBufferString(body))
+	if err != nil {
+		return
+	}
 	req.Header.Set("Authorization", h)
 	req.Header.Set("Content-Type", ct)
-	if r, err = c.HttpClient.Do(req); err != nil {
+	if resp, err = c.HttpClient.Do(req); err != nil {
 		return
 	}
-	if r.StatusCode != 200 {
-		err = fmt.Errorf("Got HTTP %v for OAuth2 request", r.StatusCode)
+	if resp.StatusCode != 200 {
+		err = fmt.Errorf("Got HTTP %v instead of 200", resp.StatusCode)
 		return
 	}
-	if rb, err = ioutil.ReadAll(r.Body); err != nil {
+	if rb, err = ioutil.ReadAll(resp.Body); err != nil {
 		return
 	}
-	if err = json.Unmarshal(rb, rj); err != nil {
+	if err = json.Unmarshal(rb, &rj); err != nil {
 		return
 	}
 	var (
-		token_type   = string(rj["token_type"])
-		access_token = string(rj["access_token"])
-		expires_in   = int(rj["expires_in"])
+		token_type   = rj["token_type"].(string)
+		access_token = rj["access_token"].(string)
 	)
 	if token_type != "bearer" {
 		err = fmt.Errorf("Got invalid token type: %v", token_type)
 	}
 	c.AppToken = &BearerToken{
 		AccessToken: access_token,
-		Expires:     time.Now().Add(time.Second * expires_in),
 	}
 	return nil
 }

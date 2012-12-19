@@ -15,8 +15,8 @@
 package twittergo
 
 import (
+	"encoding/json"
 	"fmt"
-	"github.com/kurrik/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -34,10 +34,11 @@ const (
 )
 
 const (
-	STATUS_INVALID  = 400
-	STATUS_NOTFOUND = 404
-	STATUS_LIMIT    = 429
-	STATUS_GATEWAY  = 502
+	STATUS_INVALID   = 400
+	STATUS_FORBIDDEN = 403
+	STATUS_NOTFOUND  = 404
+	STATUS_LIMIT     = 429
+	STATUS_GATEWAY   = 502
 )
 
 type Error struct {
@@ -128,6 +129,8 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 	case STATUS_NOTFOUND:
 		fallthrough
 	case STATUS_GATEWAY:
+		fallthrough
+	case STATUS_FORBIDDEN:
 		fallthrough
 	case STATUS_INVALID:
 		e := &Errors{}
