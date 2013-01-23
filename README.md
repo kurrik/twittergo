@@ -39,9 +39,9 @@ The simplest example is probably `verify_credentials`.  This calls an
 endpoint which will return the current user if the request is signed
 correctly.
 
-The example starts by loading credentials.  This can be accomplished
-in any way.  The example implements a `LoadCredentials` which looks for
-a specifically formatted file:
+The example starts by loading credentials, which can be done in
+many ways.  The example implements a `LoadCredentials` which looks for
+the `CREDENTIALS` file mentioned above:
 
     var (
     	err    error
