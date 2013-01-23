@@ -20,6 +20,10 @@ Include in your source:
 
     import "github.com/kurrik/twittergo"
 
+Godoc
+-----
+See http://godoc.org/github.com/kurrik/twittergo
+
 Using
 -----
 The examples in `/examples` should give a good idea of how to use this client.
