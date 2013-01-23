@@ -1,6 +1,7 @@
 twittergo
 =========
-This project implements a Go client library for the Twitter APIs.
+This project implements a Go client library for the Twitter APIs.  This 
+library supports version 1.1 of Twitter's API.
 
 The goal of this project is to provide a thin veneer over my `oauth1a` library
 in order to simplify access to Twitter's APIs from Go.  Where possible, I've
@@ -33,6 +34,65 @@ You may run them by installing the library, and adding a file called
 then:
 
     go run examples/<path to example>
+    
+The simplest example is probably `verify_credentials`.  This calls an
+endpoint which will return the current user if the request is signed
+correctly.
+
+The example starts by loading credentials.  This can be accomplished
+in any way.  The example implements a `LoadCredentials` which looks for
+a specifically formatted file:
+
+    var (
+    	err    error
+    	client *twittergo.Client
+    	req    *http.Request
+    	resp   *twittergo.APIResponse
+    	user   *twittergo.User
+    )
+    client, err = LoadCredentials()
+    if err != nil {
+    	fmt.Printf("Could not parse CREDENTIALS file: %v\n", err)
+    	os.Exit(1)
+    }
+
+Then, a standard `http` request is created to a `/1.1/` endpoint:
+
+    req, err = http.NewRequest("GET", "/1.1/account/verify_credentials.json", nil)
+    if err != nil {
+    	fmt.Printf("Could not parse request: %v\n", err)
+    	os.Exit(1)
+    }
+    
+The client object handles sending the request:
+
+    resp, err = client.SendRequest(req)
+    if err != nil {
+    	fmt.Printf("Could not send request: %v\n", err)
+    	os.Exit(1)
+    }
+
+The response object has some convenience methods for checking rate limits, etc:
+
+    if resp.HasRateLimit() {
+    	fmt.Printf("Rate limit:           %v\n", resp.RateLimit())
+    	fmt.Printf("Rate limit remaining: %v\n", resp.RateLimitRemaining())
+    	fmt.Printf("Rate limit reset:     %v\n", resp.RateLimitReset())
+    } else {
+    	fmt.Printf("Could not parse rate limit from response.\n")
+    }
+
+Finally, if the response format is known, the library provides some standard
+objects which make parsing response data easier:
+
+    user = &twittergo.User{}
+    err = resp.Parse(user)
+    if err != nil {
+    	fmt.Printf("Problem parsing response: %v\n", err)
+    	os.Exit(1)
+    }
+    fmt.Printf("ID:                   %v\n", user.Id())
+    fmt.Printf("Name:                 %v\n", user.Name())
 
 Debugging
 ---------
