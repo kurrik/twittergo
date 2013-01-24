@@ -122,6 +122,18 @@ func (r APIResponse) MediaRateLimitReset() time.Time {
 	return t
 }
 
+func (r APIResponse) ReadBody() string {
+	var (
+		b   []byte
+		err error
+	)
+	defer r.Body.Close()
+	if b, err = ioutil.ReadAll(r.Body); err != nil {
+		return ""
+	}
+	return string(b)
+}
+
 // Parses a JSON encoded HTTP response into the supplied interface.
 func (r APIResponse) Parse(out interface{}) (err error) {
 	var b []byte
