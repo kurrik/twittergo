@@ -1,7 +1,7 @@
 twittergo
 =========
-This project implements a Go client library for the Twitter APIs.  This 
-library supports version 1.1 of Twitter's API.
+This project implements a Go client library for the Twitter APIs.  This
+library supports version 1.1 of Twitter's API and application-only auth.
 
 The goal of this project is to provide a thin veneer over my `oauth1a` library
 in order to simplify access to Twitter's APIs from Go.  Where possible, I've
@@ -38,7 +38,7 @@ You may run them by installing the library, and adding a file called
 then:
 
     go run examples/<path to example>
-    
+
 The simplest example is probably `verify_credentials`.  This calls an
 endpoint which will return the current user if the request is signed
 correctly.
@@ -67,7 +67,7 @@ Then, a standard `http` request is created to a `/1.1/` endpoint:
     	fmt.Printf("Could not parse request: %v\n", err)
     	os.Exit(1)
     }
-    
+
 The client object handles sending the request:
 
     resp, err = client.SendRequest(req)
@@ -97,6 +97,38 @@ objects which make parsing response data easier:
     }
     fmt.Printf("ID:                   %v\n", user.Id())
     fmt.Printf("Name:                 %v\n", user.Name())
+
+Application-only auth
+---------------------
+If no user credentials are set, then the library falls back to attempting
+to authenticate with application-only auth, as described here:
+https://dev.twitter.com/docs/auth/application-only-auth
+
+If you want to obtain an access token for later use, create a client with
+no user credentials.
+
+    config := &oauth1a.ClientConfig{
+    	ConsumerKey:    "consumer_key",
+    	ConsumerSecret: "consumer_secret",
+    }
+    client = twittergo.NewClient(config, nil)
+    if err := c.FetchAppToken(); err != nil {
+    	// Handle error ...
+    }
+    token := c.GetAppToken()
+    // ... Save token in data store
+
+To restore a previously obtained token, just call SetAppToken():
+
+    // Get token from data store ...
+    c.SetAppToken(token)
+
+Saving and restoring the token isn't necessary if you keep the client in
+memory, though.  If you just create a client without any user credentials,
+calls to `SendRequest` will automatically fetch and persist the app token
+in memory.  See
+[examples/search_app_auth/main.go](https://github.com/kurrik/twittergo/blob/master/examples/search_app_auth/main.go)
+for an example of this.
 
 Debugging
 ---------
