@@ -81,8 +81,26 @@ func (c *Client) SetUser(user *oauth1a.UserConfig) {
 	c.User = user
 }
 
+// Sets the app-only auth token to the specified string.
+func (c *Client) SetAppToken(token string) {
+	c.AppToken = &BearerToken{
+		AccessToken: token,
+	}
+}
+
+// Returns the current app-only auth token or an empty string.
+// Must call FetchAppToken to populate this value before getting it.
+// You may call SetAppToken with the value returned by this call in order
+// to restore a previously-fetched bearer token to use.
+func (c *Client) GetAppToken() string {
+	if c.AppToken == nil {
+		return ""
+	}
+	return c.AppToken.AccessToken
+}
+
 // Requests a new app auth bearer token and stores it.
-func (c *Client) GetAppToken() (err error) {
+func (c *Client) FetchAppToken() (err error) {
 	var (
 		req  *http.Request
 		resp *http.Response
@@ -123,16 +141,14 @@ func (c *Client) GetAppToken() (err error) {
 	if token_type != "bearer" {
 		err = fmt.Errorf("Got invalid token type: %v", token_type)
 	}
-	c.AppToken = &BearerToken{
-		AccessToken: access_token,
-	}
+	c.SetAppToken(access_token)
 	return nil
 }
 
 // Signs the request with app-only auth, fetching a bearer token if needed.
 func (c *Client) Sign(req *http.Request) (err error) {
 	if c.AppToken == nil {
-		if err = c.GetAppToken(); err != nil {
+		if err = c.FetchAppToken(); err != nil {
 			return
 		}
 	}
