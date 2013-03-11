@@ -15,8 +15,8 @@
 package twittergo
 
 import (
-	"github.com/kurrik/json"
 	"fmt"
+	"github.com/kurrik/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -41,26 +41,39 @@ const (
 	STATUS_GATEWAY   = 502
 )
 
-type Error struct {
-	Code    int
-	Message string
+type Error map[string]interface{}
+
+func (e Error) Code() int64 {
+	return e["code"].(int64)
+}
+
+func (e Error) Message() string {
+	return e["message"].(string)
 }
 
 func (e Error) Error() string {
 	msg := "Error %v: %v"
-	return fmt.Sprintf(msg, e.Code, e.Message)
+	return fmt.Sprintf(msg, e.Code(), e.Message())
 }
 
-type Errors struct {
-	Errors []Error
-}
+type Errors map[string]interface{}
 
 func (e Errors) Error() string {
-	msg := ""
-	for _, err := range e.Errors {
-		msg += err.Error() + ". "
+	var (
+		msg string = ""
+		err Error
+		ok  bool
+	)
+	for _, val := range e["errors"].([]interface{}) {
+		if err, ok = val.(map[string]interface{}); ok {
+			msg += err.Error() + ". "
+		}
 	}
 	return msg
+}
+
+func (e Errors) String() string {
+	return e.Error()
 }
 
 type RateLimitError struct {
@@ -148,7 +161,7 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		e := &Errors{}
 		defer r.Body.Close()
 		if b, err = ioutil.ReadAll(r.Body); err == nil {
-			json.Unmarshal(b, e)
+			err = json.Unmarshal(b, e)
 			err = *e
 		}
 		return
