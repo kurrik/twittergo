@@ -15,7 +15,7 @@
 package twittergo
 
 import (
-	"encoding/json"
+	"github.com/kurrik/json"
 	"fmt"
 	"io"
 	"io/ioutil"
