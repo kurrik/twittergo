@@ -20,6 +20,7 @@ import (
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 )
@@ -254,6 +255,34 @@ func (sr SearchResults) Statuses() []Tweet {
 		b[i] = v.(map[string]interface{})
 	}
 	return b
+}
+
+func (sr SearchResults) SearchMetadata() map[string]interface{} {
+	a := sr["search_metadata"].(map[string]interface{})
+	return a
+}
+
+func (sr SearchResults) NextQuery() (val url.Values, err error) {
+	var (
+		sm   map[string]interface{}
+		n    interface{}
+		next string
+		ok   bool
+	)
+	sm = sr.SearchMetadata()
+	if n, ok = sm["next_results"]; !ok {
+		err = fmt.Errorf("Could not get next_results from search")
+		return
+	}
+	if next, ok = n.(string); !ok {
+		err = fmt.Errorf("Could not convert next_results to str: %v", n)
+		return
+	}
+	if next[0] == '?' {
+		next = next[1:]
+	}
+	val, err = url.ParseQuery(next)
+	return
 }
 
 // It's a less structured list of Tweets!
