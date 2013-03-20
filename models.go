@@ -15,6 +15,7 @@
 package twittergo
 
 import (
+	"compress/gzip"
 	"fmt"
 	"github.com/kurrik/json"
 	"io"
@@ -22,6 +23,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -136,13 +138,30 @@ func (r APIResponse) MediaRateLimitReset() time.Time {
 	return t
 }
 
+func (r APIResponse) readBody() (b []byte, err error) {
+	var (
+		header string
+		reader io.Reader
+	)
+	header = strings.ToLower(r.Header.Get("Content-Encoding"))
+	if header == "" || strings.Index(header, "gzip") == -1 {
+		reader = r.Body
+		defer r.Body.Close()
+	} else {
+		if reader, err = gzip.NewReader(r.Body); err != nil {
+			return
+		}
+	}
+	b, err = ioutil.ReadAll(reader)
+	return
+}
+
 func (r APIResponse) ReadBody() string {
 	var (
 		b   []byte
 		err error
 	)
-	defer r.Body.Close()
-	if b, err = ioutil.ReadAll(r.Body); err != nil {
+	if b, err = r.readBody(); err != nil {
 		return ""
 	}
 	return string(b)
@@ -160,11 +179,11 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		fallthrough
 	case STATUS_INVALID:
 		e := &Errors{}
-		defer r.Body.Close()
-		if b, err = ioutil.ReadAll(r.Body); err == nil {
-			err = json.Unmarshal(b, e)
-			err = *e
+		if b, err = r.readBody(); err != nil {
+			return
 		}
+		err = json.Unmarshal(b, e)
+		err = *e
 		return
 	case STATUS_LIMIT:
 		err = RateLimitError{
@@ -174,10 +193,10 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		}
 		return
 	}
-	defer r.Body.Close()
-	if b, err = ioutil.ReadAll(r.Body); err == nil {
-		err = json.Unmarshal(b, out)
+	if b, err = r.readBody(); err != nil {
+		return
 	}
+	err = json.Unmarshal(b, out)
 	if err == io.EOF {
 		err = nil
 	}
@@ -241,9 +260,8 @@ func (t Tweet) CreatedAt() (out time.Time) {
 	return
 }
 
-func (t Tweet) JSON() []byte {
-	return t["json"].([]byte)
-}
+// It's a less structured list of Tweets!
+type Timeline []Tweet
 
 // It's a structured list of Tweets!
 type SearchResults map[string]interface{}
@@ -285,5 +303,68 @@ func (sr SearchResults) NextQuery() (val url.Values, err error) {
 	return
 }
 
-// It's a less structured list of Tweets!
-type Timeline []Tweet
+// A List!
+type List map[string]interface{}
+
+func (l List) User() User {
+	return User(l["user"].(map[string]interface{}))
+}
+
+func (l List) Id() (id uint64) {
+	var (
+		err error
+		src = l["id_str"].(string)
+	)
+	if id, err = strconv.ParseUint(src, 10, 64); err != nil {
+		panic(fmt.Sprintf("Could not parse ID: %v", err))
+	}
+	return
+}
+
+func (l List) IdStr() string {
+	return l["id_str"].(string)
+}
+
+func (l List) Mode() string {
+	return l["mode"].(string)
+}
+
+func (l List) Name() string {
+	return l["name"].(string)
+}
+
+func (l List) Slug() string {
+	return l["slug"].(string)
+}
+
+func (l List) SubscriberCount() int64 {
+	return l["subscriber_count"].(int64)
+}
+
+func (l List) MemberCount() int64 {
+	return l["member_count"].(int64)
+}
+
+// It's a less structured list of Lists!
+type Lists []List
+
+// It's a cursored list of Lists!
+
+type CursoredLists map[string]interface{}
+
+func (cl CursoredLists) NextCursorStr() string {
+	return cl["next_cursor_str"].(string)
+}
+
+func (cl CursoredLists) PreviousCursorStr() string {
+	return cl["previous_cursor_str"].(string)
+}
+
+func (cl CursoredLists) Lists() Lists {
+	var a []interface{} = cl["lists"].([]interface{})
+	b := make([]List, len(a))
+	for i, v := range a {
+		b[i] = v.(map[string]interface{})
+	}
+	return b
+}
