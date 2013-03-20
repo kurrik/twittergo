@@ -72,6 +72,63 @@ func handleRateLimit(err error) error {
 	return err
 }
 
+func printRateLimit(resp *twittergo.APIResponse) {
+	if resp.HasRateLimit() {
+		fmt.Printf("Rate limit:           %v\n", resp.RateLimit())
+		fmt.Printf("Rate limit remaining: %v\n", resp.RateLimitRemaining())
+		fmt.Printf("Rate limit reset:     %v\n", resp.RateLimitReset())
+	} else {
+		fmt.Printf("Could not parse rate limit from response.\n")
+	}
+}
+
+func printList(list *twittergo.List) {
+	user := list.User()
+	fmt.Printf("%v\n", list.Name())
+	fmt.Printf("Owner: %v (@%v)\n", user.Name(), user.ScreenName())
+	fmt.Printf("Members: %v\n", list.MemberCount())
+	fmt.Printf("Subscribers: %v\n\n", list.SubscriberCount())
+}
+
+func fetchAndPrintList(client *twittergo.Client, path string, query url.Values) (err error) {
+	var (
+		req     *http.Request
+		resp    *twittergo.APIResponse
+		results twittergo.Lists
+	)
+	for {
+		url := fmt.Sprintf("%v?%v", path, query.Encode())
+		req, err = http.NewRequest("GET", url, nil)
+		req.Header.Set("Accept-Encoding", "gzip, deflate")
+		if err != nil {
+			err = fmt.Errorf("Could not parse request: %v\n", err)
+			return
+		}
+		resp, err = client.SendRequest(req)
+		if err != nil {
+			err = fmt.Errorf("Could not send request: %v\n", err)
+			return
+		}
+		results = twittergo.Lists{}
+		if err = resp.Parse(&results); err != nil {
+			if err = handleRateLimit(err); err != nil {
+				err = fmt.Errorf("Problem parsing response: %v\n", err)
+				return
+			} else {
+				continue
+			}
+		}
+		fmt.Printf("\n")
+		for i, list := range results {
+			fmt.Printf("%v.) ", i+1)
+			printList(&list)
+		}
+		printRateLimit(resp)
+		return
+	}
+	return
+}
+
 func fetchAndPrintCursoredList(client *twittergo.Client, path string, query url.Values) (err error) {
 	var (
 		req     *http.Request
@@ -80,23 +137,24 @@ func fetchAndPrintCursoredList(client *twittergo.Client, path string, query url.
 		i       int64
 	)
 	i = 1
+	query.Set("cursor", "-1")
 	for {
 		url := fmt.Sprintf("%v?%v", path, query.Encode())
 		req, err = http.NewRequest("GET", url, nil)
 		req.Header.Set("Accept-Encoding", "gzip, deflate")
 		if err != nil {
-			fmt.Printf("Could not parse request: %v\n", err)
+			err = fmt.Errorf("Could not parse request: %v\n", err)
 			break
 		}
 		resp, err = client.SendRequest(req)
 		if err != nil {
-			fmt.Printf("Could not send request: %v\n", err)
+			err = fmt.Errorf("Could not send request: %v\n", err)
 			break
 		}
 		results = twittergo.CursoredLists{}
 		if err = resp.Parse(&results); err != nil {
 			if err = handleRateLimit(err); err != nil {
-				fmt.Printf("Problem parsing response: %v\n", err)
+				err = fmt.Errorf("Problem parsing response: %v\n", err)
 				break
 			} else {
 				continue
@@ -104,24 +162,15 @@ func fetchAndPrintCursoredList(client *twittergo.Client, path string, query url.
 		}
 		fmt.Printf("\n")
 		for _, list := range results.Lists() {
-			user := list.User()
-			fmt.Printf("%v.) %v\n", i, list.Name())
-			fmt.Printf("Owner: %v (@%v)\n", user.Name(), user.ScreenName())
-			fmt.Printf("Members: %v\n", list.MemberCount())
-			fmt.Printf("Subscribers: %v\n\n", list.SubscriberCount())
+			fmt.Printf("%v.) ", i)
+			printList(&list)
 			i += 1
 		}
+		printRateLimit(resp)
 		if results.NextCursorStr() == "0" {
 			break
 		}
 		query.Set("cursor", results.NextCursorStr())
-		if resp.HasRateLimit() {
-			fmt.Printf("Rate limit:           %v\n", resp.RateLimit())
-			fmt.Printf("Rate limit remaining: %v\n", resp.RateLimitRemaining())
-			fmt.Printf("Rate limit reset:     %v\n", resp.RateLimitReset())
-		} else {
-			fmt.Printf("Could not parse rate limit from response.\n")
-		}
 	}
 	return
 }
@@ -139,10 +188,27 @@ func main() {
 	}
 	query := url.Values{}
 	query.Set("screen_name", args.ScreenName)
+
+	fmt.Printf("Printing up to 100 lists %v owns or is subscribed to:\n", args.ScreenName)
+	fmt.Printf("=========================================================\n")
+	if err = fetchAndPrintList(client, "/1.1/lists/list.json", query); err != nil {
+		fmt.Println("Error: %v\n", err)
+	}
+	fmt.Printf("\n\n")
+
+	// Add count for future requests
 	query.Set("count", args.Count)
-	query.Set("cursor", "-1")
+
+	fmt.Printf("Printing the lists %v is a member of:\n", args.ScreenName)
+	fmt.Printf("=========================================================\n")
+	if err = fetchAndPrintCursoredList(client, "/1.1/lists/memberships.json", query); err != nil {
+		fmt.Println("Error: %v\n", err)
+	}
+	fmt.Printf("\n\n")
 
 	fmt.Printf("Printing the lists %v is subscribed to:\n", args.ScreenName)
 	fmt.Printf("=========================================================\n")
-	fetchAndPrintCursoredList(client, "/1.1/lists/subscriptions.json", query)
+	if err = fetchAndPrintCursoredList(client, "/1.1/lists/subscriptions.json", query); err != nil {
+		fmt.Println("Error: %v\n", err)
+	}
 }
