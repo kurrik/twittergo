@@ -16,6 +16,7 @@ package main
 
 import (
 	"../../" // Use github.com/kurrik/twittergo for your code.
+	"flag"
 	"fmt"
 	"github.com/kurrik/oauth1a"
 	"io/ioutil"
@@ -43,6 +44,19 @@ func LoadCredentials() (client *twittergo.Client, err error) {
 	return
 }
 
+type Args struct {
+	Query string
+	ResultType string
+}
+
+func parseArgs() *Args {
+	a := &Args{}
+	flag.StringVar(&a.Query, "query", "twitterapi", "Search query")
+	flag.StringVar(&a.ResultType, "result_type", "", "Type of search results to receive")
+	flag.Parse()
+	return a
+}
+
 func main() {
 	var (
 		err     error
@@ -50,15 +64,19 @@ func main() {
 		req     *http.Request
 		resp    *twittergo.APIResponse
 		results *twittergo.SearchResults
+		args    *Args
 		i       int
 	)
-	client, err = LoadCredentials()
-	if err != nil {
+	args = parseArgs()
+	if client, err = LoadCredentials(); err != nil {
 		fmt.Printf("Could not parse CREDENTIALS file: %v\n", err)
 		os.Exit(1)
 	}
 	query := url.Values{}
-	query.Set("q", "twitterapi")
+	query.Set("q", args.Query)
+	if args.ResultType != "" {
+		query.Set("result_type", args.ResultType)
+	}
 	i = 1
 	for {
 		url := fmt.Sprintf("/1.1/search/tweets.json?%v", query.Encode())
