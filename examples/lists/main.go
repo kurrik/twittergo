@@ -51,8 +51,8 @@ type Args struct {
 
 func parseArgs() *Args {
 	a := &Args{}
-	flag.StringVar(&a.ScreenName, "screen_name", "twitterapi", "Screen name to look up")
-	flag.StringVar(&a.Count, "count", "5", "Number of results / page")
+	flag.StringVar(&a.ScreenName, "screen_name", "episod", "Screen name to look up")
+	flag.StringVar(&a.Count, "count", "100", "Number of results / page")
 	flag.Parse()
 	return a
 }
@@ -202,13 +202,20 @@ func main() {
 	fmt.Printf("Printing the lists %v is a member of:\n", args.ScreenName)
 	fmt.Printf("=========================================================\n")
 	if err = fetchAndPrintCursoredList(client, "/1.1/lists/memberships.json", query); err != nil {
-		fmt.Println("Error: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
 	}
 	fmt.Printf("\n\n")
 
 	fmt.Printf("Printing the lists %v is subscribed to:\n", args.ScreenName)
 	fmt.Printf("=========================================================\n")
 	if err = fetchAndPrintCursoredList(client, "/1.1/lists/subscriptions.json", query); err != nil {
-		fmt.Println("Error: %v\n", err)
+		fmt.Printf("Error: %v\n", err)
+	}
+	fmt.Printf("\n\n")
+
+	fmt.Printf("Printing the lists %v is owner of:\n", args.ScreenName)
+	fmt.Printf("=========================================================\n")
+	if err = fetchAndPrintCursoredList(client, "/1.1/lists/ownerships.json", query); err != nil {
+		fmt.Printf("Error: %v\n", err)
 	}
 }
