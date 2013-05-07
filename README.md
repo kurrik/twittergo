@@ -26,20 +26,13 @@ See http://godoc.org/github.com/kurrik/twittergo
 
 Using
 -----
-The examples in `/examples` should give a good idea of how to use this client.
-You may run them by installing the library, and adding a file called
-`CREDENTIALS` in the project root.  The format of this file should be:
+I have moved all of the examples to the
+https://github.com/kurrik/twittergo-examples project in order to make this
+library easier to import.  Please reference that project for ways to address
+specific use cases.
 
-    <Twitter consumer key>
-    <Twitter consumer secret>
-    <Twitter access token>
-    <Twitter access token secret>
-
-then:
-
-    go run examples/<path to example>
-
-The simplest example is probably `verify_credentials`.  This calls an
+The simplest example in the `twittergo-examples` project
+is probably `verify_credentials`.  This calls an
 endpoint which will return the current user if the request is signed
 correctly.
 
@@ -127,7 +120,7 @@ Saving and restoring the token isn't necessary if you keep the client in
 memory, though.  If you just create a client without any user credentials,
 calls to `SendRequest` will automatically fetch and persist the app token
 in memory.  See
-[examples/search_app_auth/main.go](https://github.com/kurrik/twittergo/blob/master/examples/search_app_auth/main.go)
+[search_app_auth/main.go](https://github.com/kurrik/twittergo-examples/blob/master/search_app_auth/main.go)
 for an example of this.
 
 Debugging
@@ -136,16 +129,4 @@ To see what requests are being issued by the library, set up an HTTP proxy
 such as Charles Proxy and then set the following environment variable:
 
     export HTTP_PROXY=http://localhost:8888
-
-Development
------------
-Clone the repo and then run:
-
-    scripts/setup_devel.sh
-
-This will symlink the checkout directory to your $GOPATH.  Any local
-modifications will be picked up by programs depending on
-`github.com/kurrik/twittergo`.  Note that you don't need to run this to run
-the examples included with this project.
-
 
