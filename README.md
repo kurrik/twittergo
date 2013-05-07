@@ -123,7 +123,28 @@ in memory.  See
 [search_app_auth/main.go](https://github.com/kurrik/twittergo-examples/blob/master/search_app_auth/main.go)
 for an example of this.
 
-Debugging
+Google App Engine
+-----------------
+This library works with Google App Engine's Go runtime but requires slight
+modification to fall back on the `urlfetch` package for http transport.
+
+After creating a `Client`, replace its `HttpClient` with an instance of
+`urlfetch.Client`:
+
+    var (
+        r      *http.Request
+        config *oauth1a.ClientConfig
+        user   *oauth1a.UserConfig
+    )
+    ...
+    ctx = appengine.NewContext(r)
+    c = twittergo.NewClient(config, user)
+    c.HttpClient = urlfetch.Client(ctx)
+    
+For a comprehensive example, see
+[user_timeline_appengine](https://github.com/kurrik/twittergo-examples/blob/master/user_timeline_appengine/src/app/app.go#L138)
+
+Debugging 
 ---------
 To see what requests are being issued by the library, set up an HTTP proxy
 such as Charles Proxy and then set the following environment variable:
