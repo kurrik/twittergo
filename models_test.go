@@ -137,7 +137,7 @@ func TestNonJSONErrorWith500(t *testing.T) {
 	// Setup
 	var body = `<!DOCTYPE html><html><body>Foo</body></html>`
 	var resp = getResponse(500, body)
-	resp.Status = "Bad Gateway"
+	resp.Status = "Server Error"
 	resp.Header.Set("Content-Length", fmt.Sprintf("%v", len(body)))
 
 	// Test
