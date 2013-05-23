@@ -37,6 +37,7 @@ const (
 )
 
 const (
+	STATUS_OK           = 200
 	STATUS_INVALID      = 400
 	STATUS_UNAUTHORIZED = 401
 	STATUS_FORBIDDEN    = 403
@@ -194,8 +195,11 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		if b, err = r.readBody(); err != nil {
 			return
 		}
-		err = json.Unmarshal(b, e)
-		err = *e
+		if err = json.Unmarshal(b, e); err != nil {
+			err = fmt.Errorf("%v", string(b))
+		} else {
+			err = *e
+		}
 		return
 	case STATUS_LIMIT:
 		err = RateLimitError{
@@ -204,13 +208,19 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 			Reset:     r.RateLimitReset(),
 		}
 		return
-	}
-	if b, err = r.readBody(); err != nil {
-		return
-	}
-	err = json.Unmarshal(b, out)
-	if err == io.EOF {
-		err = nil
+	case STATUS_OK:
+		if b, err = r.readBody(); err != nil {
+			return
+		}
+		err = json.Unmarshal(b, out)
+		if err == io.EOF {
+			err = nil
+		}
+	default:
+		if b, err = r.readBody(); err != nil {
+			return
+		}
+		err = fmt.Errorf("%v", string(b))
 	}
 	return
 }
