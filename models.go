@@ -80,6 +80,15 @@ func (e Errors) String() string {
 	return e.Error()
 }
 
+func (e Errors) Errors() []Error {
+	var errs = e["errors"].([]interface{})
+	var out = make([]Error, len(errs))
+	for i, val := range errs {
+		out[i] = Error(val.(map[string]interface{}))
+	}
+	return out
+}
+
 type RateLimitError struct {
 	Limit     uint32
 	Remaining uint32
