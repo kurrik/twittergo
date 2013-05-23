@@ -91,6 +91,67 @@ objects which make parsing response data easier:
     fmt.Printf("ID:                   %v\n", user.Id())
     fmt.Printf("Name:                 %v\n", user.Name())
 
+Error handling
+--------------
+Errors are returned by most methods as is Golang convention. However, these
+errors may sometimes be cast into `twittergo.Errors`
+or `twittergo.RateLimitError` structs which will provide additional information.
+
+To check for rate limiting or other types of server errors, attempt to cast
+any errors returned by the `APIResponse.Parse` method.
+
+    resp, err = client.SendRequest(req)
+    if err != nil {
+    	fmt.Printf("Could not send request: %v\n", err)
+    	os.Exit(1)
+    }
+    tweet = &twittergo.Tweet{}
+    err = resp.Parse(tweet)
+    if err != nil {
+    	if rle, ok := err.(twittergo.RateLimitError); ok {
+    		fmt.Printf("Rate limited, reset at %v\n", rle.Reset)
+    	} else if errs, ok := err.(twittergo.Errors); ok {
+    		for i, val := range errs.Errors() {
+    			fmt.Printf("Error #%v - ", i + 1)
+    			fmt.Printf("Code: %v ", val.Code())
+    			fmt.Printf("Msg: %v\n", val.Message())
+    		}
+    	} else {
+    		fmt.Printf("Problem parsing response: %v\n", err)
+    	}
+    	os.Exit(1)
+    }
+
+The previous snippet would print the following if a user attempted to Tweet
+the same text twice in a row:
+
+    Error #1 - Code: 187 Msg: Status is a duplicate
+
+Rate limit errors are pretty easy to use.  They're a simple struct containing
+what the limit for the request was, how many were remaining (should be 0)
+and when the limiting resets:
+
+    type RateLimitError struct {
+    	Limit     uint32
+    	Remaining uint32
+    	Reset     time.Time
+    }
+
+The Errors type is a little more complicated, as it may return one or more
+server side errors.  It is possible to cast one to a string using the standard
+`Error` method, but if you need to handle individual errors, iterate over
+the slice returned by `Errors` (plural) instead:
+
+    for i, val := range errs.Errors() {
+    	fmt.Printf("Error #%v - ", i + 1)
+    	fmt.Printf("Code: %v ", val.Code())
+    	fmt.Printf("Msg: %v\n", val.Message())
+    }
+
+Each of *those* errors has a `Code` and a `Message` method, which return
+values and strings corresponding to those listed in the "Error codes" section
+of this page: https://dev.twitter.com/docs/error-codes-responses
+
 Application-only auth
 ---------------------
 If no user credentials are set, then the library falls back to attempting
