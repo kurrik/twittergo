@@ -17,13 +17,16 @@ package twittergo
 
 import (
 	"bytes"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/kurrik/oauth1a"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -40,10 +43,20 @@ type BearerToken struct {
 	AccessToken string
 }
 
+func getEnvEitherCase(k string) string {
+	if v := os.Getenv(strings.ToUpper(k)); v != "" {
+		return v
+	}
+	return os.Getenv(strings.ToLower(k))
+}
+
 // Creates a new Twitter client with the supplied OAuth configuration.
 // Supports the use of HTTP proxies through the $HTTP_PROXY env var.
 // For example:
 //     export HTTP_PROXY=http://localhost:8888
+//
+// When using a proxy, disable TLS certificate verification with the following:
+//     export TLS_INSECURE=1
 func NewClient(config *oauth1a.ClientConfig, user *oauth1a.UserConfig) *Client {
 	var (
 		host      = "api.twitter.com"
@@ -51,10 +64,18 @@ func NewClient(config *oauth1a.ClientConfig, user *oauth1a.UserConfig) *Client {
 		req, _    = http.NewRequest("GET", "https://api.twitter.com", nil)
 		proxy, _  = http.ProxyFromEnvironment(req)
 		transport *http.Transport
+		tlsconfig *tls.Config
 	)
 	if proxy != nil {
+		tlsconfig = &tls.Config{
+			InsecureSkipVerify: getEnvEitherCase("TLS_INSECURE") != "",
+		}
+		if tlsconfig.InsecureSkipVerify {
+			log.Printf("WARNING: SSL cert verification  disabled\n")
+		}
 		transport = &http.Transport{
-			Proxy: http.ProxyURL(proxy),
+			Proxy:           http.ProxyURL(proxy),
+			TLSClientConfig: tlsconfig,
 		}
 	} else {
 		transport = &http.Transport{}
