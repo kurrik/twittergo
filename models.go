@@ -154,10 +154,10 @@ func (r APIResponse) readBody() (b []byte, err error) {
 		header string
 		reader io.Reader
 	)
+	defer r.Body.Close()
 	header = strings.ToLower(r.Header.Get("Content-Encoding"))
 	if header == "" || strings.Index(header, "gzip") == -1 {
 		reader = r.Body
-		defer r.Body.Close()
 	} else {
 		if reader, err = gzip.NewReader(r.Body); err != nil {
 			return
