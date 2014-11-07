@@ -207,6 +207,8 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 			Remaining: r.RateLimitRemaining(),
 			Reset:     r.RateLimitReset(),
 		}
+		// consume the request body even if we don't need it
+		r.readBody()
 		return
 	case STATUS_OK:
 		if b, err = r.readBody(); err != nil {
