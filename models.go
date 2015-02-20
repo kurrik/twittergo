@@ -273,6 +273,10 @@ func (t Tweet) User() User {
 	return User(t["user"].(map[string]interface{}))
 }
 
+func (t Tweet) Language() string {
+	return t["lang"].(string)
+}
+
 func (t Tweet) CreatedAt() (out time.Time) {
 	var (
 		err error
