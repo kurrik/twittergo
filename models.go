@@ -154,10 +154,10 @@ func (r APIResponse) readBody() (b []byte, err error) {
 		header string
 		reader io.Reader
 	)
+	defer r.Body.Close()
 	header = strings.ToLower(r.Header.Get("Content-Encoding"))
 	if header == "" || strings.Index(header, "gzip") == -1 {
 		reader = r.Body
-		defer r.Body.Close()
 	} else {
 		if reader, err = gzip.NewReader(r.Body); err != nil {
 			return
@@ -207,6 +207,8 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 			Remaining: r.RateLimitRemaining(),
 			Reset:     r.RateLimitReset(),
 		}
+		// consume the request body even if we don't need it
+		r.readBody()
 		return
 	case STATUS_OK:
 		if b, err = r.readBody(); err != nil {
