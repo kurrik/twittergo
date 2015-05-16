@@ -46,6 +46,23 @@ const (
 	STATUS_GATEWAY      = 502
 )
 
+// Error returned if there was an issue parsing the response body.
+type ResponseError struct {
+	Body string
+	Code int
+}
+
+func NewResponseError(code int, body string) ResponseError {
+	return ResponseError{Code: code, Body: body}
+}
+
+func (e ResponseError) Error() string {
+	return fmt.Sprintf(
+		"Unable to handle response (status code %d): `%v`",
+		e.Code,
+		e.Body)
+}
+
 type Error map[string]interface{}
 
 func (e Error) Code() int64 {
@@ -196,7 +213,7 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 			return
 		}
 		if err = json.Unmarshal(b, e); err != nil {
-			err = fmt.Errorf("%v", string(b))
+			err = NewResponseError(r.StatusCode, string(b))
 		} else {
 			err = *e
 		}
@@ -222,7 +239,7 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		if b, err = r.readBody(); err != nil {
 			return
 		}
-		err = fmt.Errorf("%v", string(b))
+		err = NewResponseError(r.StatusCode, string(b))
 	}
 	return
 }

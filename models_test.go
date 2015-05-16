@@ -145,8 +145,9 @@ func TestNonJSONErrorWith500(t *testing.T) {
 		api_resp *APIResponse
 		tweet    *Tweet
 		err      error
+		rerr     ResponseError
 		ok       bool
-		err_str  string
+		expected string
 	)
 	api_resp = (*APIResponse)(resp)
 	tweet = &Tweet{}
@@ -160,9 +161,18 @@ func TestNonJSONErrorWith500(t *testing.T) {
 	if _, ok = err.(Errors); ok {
 		t.Fatalf("Error should not parse to a Errors error (ugh)")
 	}
-	err_str = fmt.Sprintf("%v", err)
-	if err_str != body {
-		t.Errorf("Error should be text of response body")
+	expected = fmt.Sprintf("Unable to handle response (status code 500): `%v`", body)
+	if err.Error() != expected {
+		t.Fatalf("Rendered error string `%s`, expected `%s`", err.Error(), expected)
+	}
+	if rerr, ok = err.(ResponseError); !ok {
+		t.Fatalf("Error should be castable to a ResponseError")
+	}
+	if rerr.Code != 500 {
+		t.Errorf("ResponseError code should be 500, got %d", rerr.Code)
+	}
+	if rerr.Body != body {
+		t.Errorf("ResponseError body should be `%s`, got `%s`", body, rerr.Body)
 	}
 }
 
@@ -178,8 +188,9 @@ func TestNonJSONErrorWith502(t *testing.T) {
 		api_resp *APIResponse
 		tweet    *Tweet
 		err      error
+		rerr     ResponseError
 		ok       bool
-		err_str  string
+		expected string
 	)
 	api_resp = (*APIResponse)(resp)
 	tweet = &Tweet{}
@@ -193,9 +204,57 @@ func TestNonJSONErrorWith502(t *testing.T) {
 	if _, ok = err.(Errors); ok {
 		t.Fatalf("Error should not parse to a Errors error (ugh)")
 	}
-	err_str = fmt.Sprintf("%v", err)
-	if err_str != body {
-		t.Errorf("Error should be text of response body")
+	expected = fmt.Sprintf("Unable to handle response (status code 502): `%v`", body)
+	if err.Error() != expected {
+		t.Fatalf("Rendered error string `%s`, expected `%s`", err.Error(), expected)
+	}
+	if rerr, ok = err.(ResponseError); !ok {
+		t.Fatalf("Error should be castable to a ResponseError")
+	}
+	if rerr.Code != 502 {
+		t.Errorf("ResponseError code should be 502, got %d", rerr.Code)
+	}
+	if rerr.Body != body {
+		t.Errorf("ResponseError body should be `%s`, got `%s`", body, rerr.Body)
 	}
 }
 
+func TestEmptyErrorWith403(t *testing.T) {
+	// Setup
+	var body = ``
+	var resp = getResponse(403, body)
+	resp.Status = "Forbidden"
+	resp.Header.Set("Content-Length", "0")
+
+	// Test
+	var (
+		api_resp *APIResponse
+		tweet    *Tweet
+		err      error
+		rerr     ResponseError
+		ok       bool
+		expected string
+	)
+	api_resp = (*APIResponse)(resp)
+	tweet = &Tweet{}
+	err = api_resp.Parse(tweet)
+	if err == nil {
+		t.Fatalf("Expected an error in Parse")
+	}
+	expected = "Unable to handle response (status code 403): ``"
+	if err.Error() != expected {
+		t.Fatalf("Rendered error string `%s`, expected `%s`", err.Error(), expected)
+	}
+	if _, ok = err.(RateLimitError); ok {
+		t.Fatalf("Error should not be castable to a RateLimitError error")
+	}
+	if rerr, ok = err.(ResponseError); !ok {
+		t.Fatalf("Error should be castable to a ResponseError")
+	}
+	if rerr.Code != 403 {
+		t.Errorf("ResponseError code should be 403, got %d", rerr.Code)
+	}
+	if rerr.Body != `` {
+		t.Errorf("ResponseError body should be ``, got `%s`", rerr.Body)
+	}
+}
