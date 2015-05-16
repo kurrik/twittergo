@@ -94,7 +94,7 @@ objects which make parsing response data easier:
 Error handling
 --------------
 Errors are returned by most methods as is Golang convention. However, these
-errors may sometimes be cast into `twittergo.Errors`
+errors may sometimes be cast into `twittergo.ResponseError`, `twittergo.Errors`
 or `twittergo.RateLimitError` structs which will provide additional information.
 
 To check for rate limiting or other types of server errors, attempt to cast
