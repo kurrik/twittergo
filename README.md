@@ -212,3 +212,9 @@ such as Charles Proxy and then set the following environment variable:
 
     export HTTP_PROXY=http://localhost:8888
 
+Because Go will reject HTTPS requests through a proxy, you'll need to set
+the following for any HTTPS endpoints:
+
+    export TLS_INSECURE=1
+
+Make sure not to use this in production!
