@@ -38,6 +38,9 @@ const (
 
 const (
 	STATUS_OK           = 200
+	STATUS_CREATED      = 201
+	STATUS_ACCEPTED     = 202
+	STATUS_NO_CONTENT   = 204
 	STATUS_INVALID      = 400
 	STATUS_UNAUTHORIZED = 401
 	STATUS_FORBIDDEN    = 403
@@ -227,6 +230,12 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 		// consume the request body even if we don't need it
 		r.readBody()
 		return
+	case STATUS_NO_CONTENT:
+		return
+	case STATUS_CREATED:
+		fallthrough
+	case STATUS_ACCEPTED:
+		fallthrough
 	case STATUS_OK:
 		if b, err = r.readBody(); err != nil {
 			return
@@ -412,4 +421,30 @@ func (cl CursoredLists) Lists() Lists {
 		b[i] = v.(map[string]interface{})
 	}
 	return b
+}
+
+// Nested response structure for video uploads.
+type VideoUpload map[string]interface{}
+
+func (v VideoUpload) Type() string {
+	return v["video_type"].(string)
+}
+
+// Response for media upload requests.
+type MediaResponse map[string]interface{}
+
+func (r MediaResponse) MediaId() int64 {
+	return r["media_id"].(int64)
+}
+
+func (r MediaResponse) Size() int64 {
+	return r["size"].(int64)
+}
+
+func (r MediaResponse) ExpiresAfterSecs() int32 {
+	return r["expires_after_secs"].(int32)
+}
+
+func (r MediaResponse) Video() VideoUpload {
+	return VideoUpload(r["video"].(map[string]interface{}))
 }
