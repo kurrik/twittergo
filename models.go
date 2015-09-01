@@ -16,8 +16,8 @@ package twittergo
 
 import (
 	"compress/gzip"
+	"encoding/json"
 	"fmt"
-	"github.com/kurrik/json"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -69,7 +69,7 @@ func (e ResponseError) Error() string {
 type Error map[string]interface{}
 
 func (e Error) Code() int64 {
-	return e["code"].(int64)
+	return int64(e["code"].(float64))
 }
 
 func (e Error) Message() string {
