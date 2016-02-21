@@ -201,11 +201,34 @@ After creating a `Client`, replace its `HttpClient` with an instance of
     ctx = appengine.NewContext(r)
     c = twittergo.NewClient(config, user)
     c.HttpClient = urlfetch.Client(ctx)
-    
+
 For a comprehensive example, see
 [user_timeline_appengine](https://github.com/kurrik/twittergo-examples/blob/master/user_timeline_appengine/src/app/app.go#L138)
 
-Debugging 
+Custom models
+-------------
+The `twittergo` library comes with some standard models for structures like
+Tweets and Timelines, but you are not required to use them.  Pass any
+struct which will deserialize from a Twitter API response to `APIResponse.Parse`:
+
+    type CustomTweet struct {
+        CustomID   string `json:"id_str"`
+        CustomText string `json:"text"`
+    }
+    ...
+
+    req, err = http.NewRequest("GET", url, nil)
+    ...
+    resp, err = client.SendRequest(req)
+    customTweet = &CustomTweet{}
+    err = resp.Parse(customTweet)
+    ...
+
+For complete code, see the
+[custom_struct](https://github.com/kurrik/twittergo-examples/blob/master/custom_struct/main.go)
+example.
+
+Debugging
 ---------
 To see what requests are being issued by the library, set up an HTTP proxy
 such as Charles Proxy and then set the following environment variable:
