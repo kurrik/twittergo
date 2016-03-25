@@ -89,6 +89,9 @@ func (e Errors) Error() string {
 		err Error
 		ok  bool
 	)
+	if e["errors"] == nil {
+		return msg
+	}
 	for _, val := range e["errors"].([]interface{}) {
 		if err, ok = val.(map[string]interface{}); ok {
 			msg += err.Error() + ". "
