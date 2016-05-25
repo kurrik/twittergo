@@ -113,6 +113,22 @@ func (e Errors) Errors() []Error {
 	return out
 }
 
+// RateLimitResponse is implemented by both RateLimitError and APIResponse.
+type RateLimitResponse interface {
+	// HasRateLimit returns false if the ratelimiting information is
+	// optional and missing.
+	HasRateLimit() bool
+	// RateLimit returns the requests per time period capacity of the
+	// limit.
+	RateLimit() uint32
+	// RateLimitRemaining returns how many requests are still available
+	// in the current time period.
+	RateLimitRemaining() uint32
+	// RateLimitReset returns when the rate limit will reset.
+	RateLimitReset() time.Time
+}
+
+// RateLimitError is returned from SendRequest when a rate limit is encountered.
 type RateLimitError struct {
 	Limit     uint32
 	Remaining uint32
@@ -124,6 +140,24 @@ func (e RateLimitError) Error() string {
 	return fmt.Sprintf(msg, e.Limit, e.Remaining, e.Reset)
 }
 
+func (e RateLimitError) HasRateLimit() bool {
+	return true
+}
+
+func (e RateLimitError) RateLimit() uint32 {
+	return e.Limit
+}
+
+func (e RateLimitError) RateLimitRemaining() uint32 {
+	return e.Remaining
+}
+
+func (e RateLimitError) RateLimitReset() time.Time {
+	return e.Reset
+}
+
+// APIResponse provides methods for retrieving information from the HTTP
+// headers in a Twitter API response.
 type APIResponse http.Response
 
 func (r APIResponse) HasRateLimit() bool {
@@ -190,6 +224,8 @@ func (r APIResponse) readBody() (b []byte, err error) {
 	return
 }
 
+// ReadBody returns the body of the response as a string.
+// Only one of ReadBody and Parse may be called on a given APIResponse.
 func (r APIResponse) ReadBody() string {
 	var (
 		b   []byte
@@ -201,7 +237,11 @@ func (r APIResponse) ReadBody() string {
 	return string(b)
 }
 
-// Parses a JSON encoded HTTP response into the supplied interface.
+// Parse unmarshals a JSON encoded HTTP response into the supplied interface,
+// with handling for the various kinds of errors the Twitter API can return.
+//
+// The returned error may be of the type Errors, RateLimitError,
+// ResponseError, or an error returned from io.Reader.Read().
 func (r APIResponse) Parse(out interface{}) (err error) {
 	var b []byte
 	switch r.StatusCode {
