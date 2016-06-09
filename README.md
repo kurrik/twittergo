@@ -10,6 +10,8 @@ Additionally, responses could be parsed directly as JSON, but some wrapper
 types have been defined in order to provide some convenience methods for
 accessing data.
 
+[![Build Status](https://travis-ci.org/kurrik/twittergo.svg?branch=master)](https://travis-ci.org/kurrik/twittergo)
+
 Installing
 ----------
 Run
