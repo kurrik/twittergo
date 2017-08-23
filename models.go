@@ -338,6 +338,10 @@ func (t Tweet) Text() string {
 	return t["text"].(string)
 }
 
+func (t Tweet) FullText() string {
+	return t["full_text"].(string)
+}
+
 func (t Tweet) User() User {
 	return User(t["user"].(map[string]interface{}))
 }
