@@ -69,30 +69,31 @@ func (e ResponseError) Error() string {
 type Error map[string]interface{}
 
 func (e Error) Code() int64 {
-	return int64(e["code"].(float64))
+	return int64(float64Value(e, "code"))
 }
 
 func (e Error) Message() string {
-	return e["message"].(string)
+	return stringValue(e, "message")
 }
 
 func (e Error) Error() string {
-	msg := "Error %v: %v"
-	return fmt.Sprintf(msg, e.Code(), e.Message())
+	return fmt.Sprintf("Error %v: %v", e.Code(), e.Message())
 }
 
 type Errors map[string]interface{}
 
 func (e Errors) Error() string {
 	var (
-		msg string = ""
-		err Error
-		ok  bool
+		msg  string = ""
+		err  Error
+		ok   bool
+		errs []interface{}
 	)
-	if e["errors"] == nil {
+	errs = arrayValue(e, "errors")
+	if len(errs) == 0 {
 		return msg
 	}
-	for _, val := range e["errors"].([]interface{}) {
+	for _, val := range errs {
 		if err, ok = val.(map[string]interface{}); ok {
 			msg += err.Error() + ". "
 		}
@@ -105,7 +106,7 @@ func (e Errors) String() string {
 }
 
 func (e Errors) Errors() []Error {
-	var errs = e["errors"].([]interface{})
+	var errs = arrayValue(e, "errors")
 	var out = make([]Error, len(errs))
 	for i, val := range errs {
 		out[i] = Error(val.(map[string]interface{}))
@@ -300,66 +301,164 @@ func (r APIResponse) Parse(out interface{}) (err error) {
 type User map[string]interface{}
 
 func (u User) Id() uint64 {
-	id, _ := strconv.ParseUint(u["id_str"].(string), 10, 64)
+	id, _ := strconv.ParseUint(stringValue(u, "id_str"), 10, 64)
 	return id
 }
 
 func (u User) IdStr() string {
-	return u["id_str"].(string)
+	return stringValue(u, "id_str")
 }
 
 func (u User) Name() string {
-	return u["name"].(string)
+	return stringValue(u, "name")
 }
 
 func (u User) ScreenName() string {
-	return u["screen_name"].(string)
+	return stringValue(u, "screen_name")
 }
 
 // It's a Tweet! (Adorably referred to by the API as a "status").
+// https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/intro-to-tweet-json
+// https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/tweet-object
+// https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/extended-entities-object
 type Tweet map[string]interface{}
+
+func (t Tweet) CreatedAt() (out time.Time) {
+	var (
+		err error
+		src = stringValue(t, "created_at")
+	)
+	if out, err = time.Parse(time.RubyDate, src); err != nil {
+		out = time.Time{} // Could not parse time
+	}
+	return
+}
+
+func (t Tweet) Entities() Entities {
+	return Entities(mapValue(t, "entities"))
+}
+
+func (t Tweet) ExtendedEntities() Entities {
+	return Entities(mapValue(t, "extended_entities"))
+}
+
+func (t Tweet) ExtendedTweet() Tweet {
+	return Tweet(mapValue(t, "extended_tweet"))
+}
+
+func (t Tweet) FullText() string {
+	return stringValue(t, "full_text")
+}
 
 func (t Tweet) Id() (id uint64) {
 	var (
 		err error
-		src = t["id_str"].(string)
+		src = stringValue(t, "id_str")
 	)
 	if id, err = strconv.ParseUint(src, 10, 64); err != nil {
-		panic(fmt.Sprintf("Could not parse ID: %v", err))
+		return 0
 	}
 	return
 }
 
 func (t Tweet) IdStr() string {
-	return t["id_str"].(string)
-}
-
-func (t Tweet) Text() string {
-	return t["text"].(string)
-}
-
-func (t Tweet) FullText() string {
-	return t["full_text"].(string)
-}
-
-func (t Tweet) User() User {
-	return User(t["user"].(map[string]interface{}))
+	return stringValue(t, "id_str")
 }
 
 func (t Tweet) Language() string {
-	return t["lang"].(string)
+	return stringValue(t, "lang")
 }
 
-func (t Tweet) CreatedAt() (out time.Time) {
-	var (
-		err error
-		src = t["created_at"].(string)
-	)
-	if out, err = time.Parse(time.RubyDate, src); err != nil {
-		panic(fmt.Sprintf("Could not parse time: %v", err))
-	}
-	return
+func (t Tweet) Text() string {
+	return stringValue(t, "text")
 }
+
+func (t Tweet) Truncated() bool {
+	return boolValue(t, "truncated")
+}
+
+func (t Tweet) User() User {
+	return User(mapValue(t, "user"))
+}
+
+// Entities such as hashtags present in the Tweet.
+// https://developer.twitter.com/en/docs/tweets/data-dictionary/overview/entities-object
+type Entities map[string]interface{}
+
+func (e Entities) Hashtags() []Hashtag {
+	values := arrayValue(e, "hashtags")
+	out := make([]Hashtag, len(values))
+	for i, val := range values {
+		out[i] = Hashtag(val.(map[string]interface{}))
+	}
+	return out
+}
+
+func (e Entities) Media() []Media {
+	values := arrayValue(e, "media")
+	out := make([]Media, len(values))
+	for i, val := range values {
+		out[i] = Media(val.(map[string]interface{}))
+	}
+	return out
+}
+
+func (e Entities) Polls() []Poll {
+	values := arrayValue(e, "polls")
+	out := make([]Poll, len(values))
+	for i, val := range values {
+		out[i] = Poll(val.(map[string]interface{}))
+	}
+	return out
+}
+
+func (e Entities) Symbols() []Symbol {
+	values := arrayValue(e, "symbols")
+	out := make([]Symbol, len(values))
+	for i, val := range values {
+		out[i] = Symbol(val.(map[string]interface{}))
+	}
+	return out
+}
+
+func (e Entities) URLs() []URL {
+	values := arrayValue(e, "urls")
+	out := make([]URL, len(values))
+	for i, val := range values {
+		out[i] = URL(val.(map[string]interface{}))
+	}
+	return out
+}
+
+func (e Entities) UserMentions() []UserMention {
+	values := arrayValue(e, "user_mentions")
+	out := make([]UserMention, len(values))
+	for i, val := range values {
+		out[i] = UserMention(val.(map[string]interface{}))
+	}
+	return out
+}
+
+// Hashtag reference in text.
+type Hashtag map[string]interface{}
+
+// Media object reference in text.
+type Media map[string]interface{}
+
+// Poll object associated with a Tweet.
+type Poll map[string]interface{}
+
+// Symbol (e.g. cashtag) reference in text.
+type Symbol map[string]interface{}
+
+// Url reference in text.
+type URL map[string]interface{}
+
+// User mention in text.
+type UserMention map[string]interface{}
+
+// A range, typically representing text ranges.
+type Range []int
 
 // It's a less structured list of Tweets!
 type Timeline []Tweet
@@ -368,7 +467,7 @@ type Timeline []Tweet
 type SearchResults map[string]interface{}
 
 func (sr SearchResults) Statuses() []Tweet {
-	var a []interface{} = sr["statuses"].([]interface{})
+	var a []interface{} = arrayValue(sr, "statuses")
 	b := make([]Tweet, len(a))
 	for i, v := range a {
 		b[i] = v.(map[string]interface{})
@@ -377,7 +476,7 @@ func (sr SearchResults) Statuses() []Tweet {
 }
 
 func (sr SearchResults) SearchMetadata() map[string]interface{} {
-	a := sr["search_metadata"].(map[string]interface{})
+	a := mapValue(sr, "search_metadata")
 	return a
 }
 
@@ -408,42 +507,42 @@ func (sr SearchResults) NextQuery() (val url.Values, err error) {
 type List map[string]interface{}
 
 func (l List) User() User {
-	return User(l["user"].(map[string]interface{}))
+	return User(mapValue(l, "user"))
 }
 
 func (l List) Id() (id uint64) {
 	var (
 		err error
-		src = l["id_str"].(string)
+		src = stringValue(l, "id_str")
 	)
 	if id, err = strconv.ParseUint(src, 10, 64); err != nil {
-		panic(fmt.Sprintf("Could not parse ID: %v", err))
+		return 0 // Could not parse the ID
 	}
 	return
 }
 
 func (l List) IdStr() string {
-	return l["id_str"].(string)
+	return stringValue(l, "id_str")
 }
 
 func (l List) Mode() string {
-	return l["mode"].(string)
+	return stringValue(l, "mode")
 }
 
 func (l List) Name() string {
-	return l["name"].(string)
+	return stringValue(l, "name")
 }
 
 func (l List) Slug() string {
-	return l["slug"].(string)
+	return stringValue(l, "slug")
 }
 
 func (l List) SubscriberCount() int64 {
-	return l["subscriber_count"].(int64)
+	return int64Value(l, "subscriber_count")
 }
 
 func (l List) MemberCount() int64 {
-	return l["member_count"].(int64)
+	return int64Value(l, "member_count")
 }
 
 // It's a less structured list of Lists!
@@ -454,15 +553,15 @@ type Lists []List
 type CursoredLists map[string]interface{}
 
 func (cl CursoredLists) NextCursorStr() string {
-	return cl["next_cursor_str"].(string)
+	return stringValue(cl, "next_cursor_str")
 }
 
 func (cl CursoredLists) PreviousCursorStr() string {
-	return cl["previous_cursor_str"].(string)
+	return stringValue(cl, "previous_cursor_str")
 }
 
 func (cl CursoredLists) Lists() Lists {
-	var a []interface{} = cl["lists"].([]interface{})
+	var a []interface{} = arrayValue(cl, "lists")
 	b := make([]List, len(a))
 	for i, v := range a {
 		b[i] = v.(map[string]interface{})
@@ -474,24 +573,24 @@ func (cl CursoredLists) Lists() Lists {
 type VideoUpload map[string]interface{}
 
 func (v VideoUpload) Type() string {
-	return v["video_type"].(string)
+	return stringValue(v, "video_type")
 }
 
 // Response for media upload requests.
 type MediaResponse map[string]interface{}
 
 func (r MediaResponse) MediaId() int64 {
-	return r["media_id"].(int64)
+	return int64Value(r, "media_id")
 }
 
 func (r MediaResponse) Size() int64 {
-	return r["size"].(int64)
+	return int64Value(r, "size")
 }
 
 func (r MediaResponse) ExpiresAfterSecs() int32 {
-	return r["expires_after_secs"].(int32)
+	return int32Value(r, "expires_after_secs")
 }
 
 func (r MediaResponse) Video() VideoUpload {
-	return VideoUpload(r["video"].(map[string]interface{}))
+	return VideoUpload(mapValue(r, "video"))
 }
