@@ -26,7 +26,12 @@ func arrayValue(m map[string]interface{}, key string) []interface{} {
 func boolValue(m map[string]interface{}, key string) bool {
 	v, exists := m[key]
 	if exists {
-		return v.(bool)
+		switch value := v.(type) {
+		case bool:
+			return value
+		default:
+			return false
+		}
 	} else {
 		return false
 	}
@@ -35,7 +40,16 @@ func boolValue(m map[string]interface{}, key string) bool {
 func int32Value(m map[string]interface{}, key string) int32 {
 	v, exists := m[key]
 	if exists {
-		return v.(int32)
+		switch value := v.(type) {
+		case int32:
+			return value
+		case int64:
+			return -1 // TODO: Should allow lib to control preference here.
+		case float64:
+			return -1 // TODO: Should allow lib to control preference here.
+		default:
+			return 0
+		}
 	} else {
 		return 0
 	}
@@ -44,7 +58,14 @@ func int32Value(m map[string]interface{}, key string) int32 {
 func int64Value(m map[string]interface{}, key string) int64 {
 	v, exists := m[key]
 	if exists {
-		return v.(int64)
+		switch value := v.(type) {
+		case int64:
+			return value
+		case float64:
+			return int64(value) // TODO: Should allow lib to control preference here.
+		default:
+			return 0
+		}
 	} else {
 		return 0
 	}
@@ -53,7 +74,14 @@ func int64Value(m map[string]interface{}, key string) int64 {
 func float64Value(m map[string]interface{}, key string) float64 {
 	v, exists := m[key]
 	if exists {
-		return v.(float64)
+		switch value := v.(type) {
+		case float64:
+			return value
+		case int64:
+			return float64(value) // TODO: Should allow lib to control preference here.
+		default:
+			return 0.0
+		}
 	} else {
 		return 0.0
 	}

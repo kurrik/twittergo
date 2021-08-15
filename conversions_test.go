@@ -63,4 +63,19 @@ func TestConversions(t *testing.T) {
 	if len(mapValue(m, "badKey")) != 0 {
 		t.Errorf("mapValue did not product correct result for invalid key")
 	}
+
+	// Test conversions
+	if int32Value(m, "int64Key") != -1 {
+		t.Errorf("int32Value did not product correct result for an int64 key")
+	}
+	if int32Value(m, "float64Key") != -1 {
+		t.Errorf("int32Value did not product correct result for a float64 key")
+	}
+	// This is dangerous - note the discrepancy in returned value: 1002011200236892160 vs 1002011200236892166.1234
+	if int64Value(m, "float64Key") != 1002011200236892160 {
+		t.Errorf("int64Value did not product correct result for a float64 key")
+	}
+	if float64Value(m, "int64Key") != 1002011200236892166.0 {
+		t.Errorf("float64Value did not product correct result for an int64 key")
+	}
 }
