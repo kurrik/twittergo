@@ -78,4 +78,14 @@ func TestConversions(t *testing.T) {
 	if float64Value(m, "int64Key") != 1002011200236892166.0 {
 		t.Errorf("float64Value did not product correct result for an int64 key")
 	}
+	if stringValue(m, "int64Key") != "1002011200236892166" {
+		t.Errorf("stringValue did not product correct result for an int64 key")
+	}
+	// This is dangerous - note the discrepancy in returned value: 1002011200236892166.1234 vs 1.0020112002368922E+18
+	if stringValue(m, "float64Key") != "1.0020112002368922E+18" {
+		t.Errorf("stringValue did not product correct result for a float64 key %v", stringValue(m, "float64Key"))
+	}
+	if stringValue(m, "boolKey") != "true" {
+		t.Errorf("stringValue did not product correct result for a bool key")
+	}
 }

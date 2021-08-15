@@ -14,6 +14,8 @@
 
 package twittergo
 
+import "strconv"
+
 func arrayValue(m map[string]interface{}, key string) []interface{} {
 	v, exists := m[key]
 	if exists {
@@ -99,7 +101,18 @@ func mapValue(m map[string]interface{}, key string) map[string]interface{} {
 func stringValue(m map[string]interface{}, key string) string {
 	v, exists := m[key]
 	if exists {
-		return v.(string)
+		switch value := v.(type) {
+		case string:
+			return value
+		case int64:
+			return strconv.FormatInt(value, 10)
+		case float64:
+			return strconv.FormatFloat(value, 'G', -1, 64)
+		case bool:
+			return strconv.FormatBool(value)
+		default:
+			return ""
+		}
 	} else {
 		return ""
 	}
